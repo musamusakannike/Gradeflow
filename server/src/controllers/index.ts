@@ -6,3 +6,4 @@ export * from "./staff.controller";
 export * from "./student.controller";
 export * from "./score.controller";
 export * from "./result.controller";
+export * from "./finance.controller";
