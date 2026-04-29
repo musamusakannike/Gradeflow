@@ -223,7 +223,13 @@ export const loginWithGoogle = async (
     }
 
     // Verify school exists
-    const school = await School.findById(schoolId);
+    const school = await School.findOne({
+      $or: [
+        { code: schoolId.toUpperCase() },
+        ...(Types.ObjectId.isValid(schoolId) ? [{ _id: schoolId }] : []),
+      ],
+    });
+
     if (!school || !school.isActive) {
       throw new NotFoundError("School not found or inactive");
     }
@@ -496,4 +502,34 @@ export const createStudentUser = async (
   await sendWelcomeEmail(user.email, user.firstName, school.name, tempPassword);
 
   return { user, student };
+};
+
+/**
+ * Get user profile
+ */
+export const getUserProfile = async (userId: Types.ObjectId): Promise<LoginResponse["user"]> => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  return formatUserResponse(user);
+};
+
+/**
+ * Update user push token
+ */
+export const updatePushToken = async (
+  userId: Types.ObjectId,
+  pushToken: string,
+): Promise<void> => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  user.expoPushToken = pushToken;
+  await user.save();
 };
