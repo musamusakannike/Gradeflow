@@ -19,4 +19,6 @@ __exportStar(require("./academic.validation"), exports);
 __exportStar(require("./academic-structure.validation"), exports);
 __exportStar(require("./staff.validation"), exports);
 __exportStar(require("./student.validation"), exports);
+__exportStar(require("./score.validation"), exports);
+__exportStar(require("./finance.validation"), exports);
 //# sourceMappingURL=index.js.map

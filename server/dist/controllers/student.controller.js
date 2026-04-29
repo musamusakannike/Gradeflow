@@ -64,7 +64,7 @@ class StudentController {
      */
     async getStudentById(req, res, next) {
         try {
-            const { id } = req.params;
+            const id = req.params.id;
             const schoolId = req.user.schoolId.toString();
             const student = await student_service_1.studentService.getStudentById(id, schoolId);
             (0, response_util_1.sendSuccess)(res, student, "Student retrieved successfully");
@@ -79,7 +79,7 @@ class StudentController {
      */
     async updateStudent(req, res, next) {
         try {
-            const { id } = req.params;
+            const id = req.params.id;
             const schoolId = req.user.schoolId.toString();
             const student = await student_service_1.studentService.updateStudent(id, schoolId, req.body);
             (0, response_util_1.sendSuccess)(res, student, "Student updated successfully");
@@ -94,7 +94,7 @@ class StudentController {
      */
     async transferStudent(req, res, next) {
         try {
-            const { id } = req.params;
+            const id = req.params.id;
             const { classId } = req.body;
             const schoolId = req.user.schoolId.toString();
             if (!classId) {
@@ -113,7 +113,7 @@ class StudentController {
      */
     async updateStatus(req, res, next) {
         try {
-            const { id } = req.params;
+            const id = req.params.id;
             const { status } = req.body;
             const schoolId = req.user.schoolId.toString();
             if (!status) {
@@ -132,7 +132,7 @@ class StudentController {
      */
     async deleteStudent(req, res, next) {
         try {
-            const { id } = req.params;
+            const id = req.params.id;
             const schoolId = req.user.schoolId.toString();
             await student_service_1.studentService.deleteStudent(id, schoolId);
             (0, response_util_1.sendSuccess)(res, null, "Student deleted successfully");
