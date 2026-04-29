@@ -1,26 +1,128 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #18201c;
+  --ink-soft: #536157;
+  --paper: #f5f2e9;
+  --paper-raised: #fffaf0;
+  --line: #ded7c7;
+  --moss: #315c43;
+  --moss-2: #6f8f5f;
+  --clay: #b95d42;
+  --ochre: #d8a23a;
+  --teal: #1f7a76;
+  --night: #121713;
+  --night-soft: #202820;
+  --white: #fffdf7;
+  --danger: #b64545;
+  --success: #2d7a4d;
+  --shadow: 0 24px 80px rgba(24, 32, 28, 0.14);
+  --radius: 18px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-line: var(--line);
+  --color-moss: var(--moss);
+  --color-clay: var(--clay);
+  --color-ochre: var(--ochre);
+  --color-teal: var(--teal);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(216, 162, 58, 0.13), transparent 28rem),
+    linear-gradient(135deg, #f7f2e6 0%, #eee8da 48%, #f4efe6 100%);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif;
+  letter-spacing: 0;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(216, 162, 58, 0.35);
+}
+
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 3px rgba(49, 92, 67, 0.22);
+}
+
+.field {
+  width: 100%;
+  border: 1px solid rgba(83, 97, 87, 0.22);
+  background: rgba(255, 253, 247, 0.8);
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.field:focus {
+  border-color: rgba(49, 92, 67, 0.55);
+  box-shadow: 0 0 0 4px rgba(49, 92, 67, 0.12);
+  outline: none;
+}
+
+.surface {
+  border: 1px solid rgba(83, 97, 87, 0.18);
+  background: rgba(255, 250, 240, 0.82);
+  box-shadow: 0 20px 60px rgba(24, 32, 28, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.pressable {
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.pressable:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes scanline {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 28px;
+  }
 }
