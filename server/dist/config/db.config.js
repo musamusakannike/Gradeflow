@@ -15,8 +15,9 @@ const connectDatabase = async () => {
         mongoose_1.default.set("strictQuery", true);
         const conn = await mongoose_1.default.connect(mongoUri, {
             maxPoolSize: 10,
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 30000,
             socketTimeoutMS: 45000,
+            family: 4, // Force IPv4 to avoid potential IPv6 resolution issues
         });
         logger_util_1.logger.info(`MongoDB Connected: ${conn.connection.host}`);
         mongoose_1.default.connection.on("error", (err) => {

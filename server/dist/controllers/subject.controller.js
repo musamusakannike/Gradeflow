@@ -3,7 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.subjectController = void 0;
 const subject_model_1 = require("../models/subject.model");
 const class_subject_model_1 = require("../models/class-subject.model");
+const class_model_1 = require("../models/class.model");
+const user_model_1 = require("../models/user.model");
+const session_model_1 = require("../models/session.model");
 const response_util_1 = require("../utils/response.util");
+const types_1 = require("../types");
 const errors_util_1 = require("../utils/errors.util");
 class SubjectController {
     /**
@@ -91,6 +95,29 @@ class SubjectController {
         try {
             const schoolId = req.user.schoolId;
             const { classId, subjectId, teacherId, sessionId } = req.body;
+            const [classDoc, subject, teacher, session] = await Promise.all([
+                class_model_1.Class.findOne({ _id: classId, schoolId }),
+                subject_model_1.Subject.findOne({ _id: subjectId, schoolId, isActive: true }),
+                user_model_1.User.findOne({
+                    _id: teacherId,
+                    schoolId,
+                    role: types_1.UserRole.TEACHER,
+                    status: "active",
+                }),
+                session_model_1.Session.findOne({ _id: sessionId, schoolId }),
+            ]);
+            if (!classDoc) {
+                throw new errors_util_1.NotFoundError("Class not found");
+            }
+            if (!subject) {
+                throw new errors_util_1.NotFoundError("Active subject not found");
+            }
+            if (!teacher) {
+                throw new errors_util_1.NotFoundError("Active teacher not found for this school");
+            }
+            if (!session) {
+                throw new errors_util_1.NotFoundError("Session not found");
+            }
             // Check for existing assignment
             const existing = await class_subject_model_1.ClassSubject.findOne({
                 schoolId,
@@ -144,6 +171,15 @@ class SubjectController {
         try {
             const { id } = req.params;
             const schoolId = req.user.schoolId;
+            const teacher = await user_model_1.User.findOne({
+                _id: req.body.teacherId,
+                schoolId,
+                role: types_1.UserRole.TEACHER,
+                status: "active",
+            });
+            if (!teacher) {
+                throw new errors_util_1.NotFoundError("Active teacher not found for this school");
+            }
             const assignment = await class_subject_model_1.ClassSubject.findOneAndUpdate({ _id: id, schoolId }, { teacherId: req.body.teacherId }, { new: true });
             if (!assignment) {
                 throw new errors_util_1.NotFoundError("Assignment not found");

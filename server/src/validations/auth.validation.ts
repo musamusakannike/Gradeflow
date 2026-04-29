@@ -7,11 +7,17 @@ export const authValidation = {
   registerSchool: z.object({
     body: z.object({
       schoolName: z.string().min(3, "School name must be at least 3 characters"),
-      schoolCode: z.string().min(2, "School code must be at least 2 characters"),
+      schoolCode: z.string().min(2, "School code must be at least 2 characters").max(10).optional(),
+      schoolEmail: z.string().email("Invalid school email address"),
+      schoolPhone: z.string().min(3, "School phone is required"),
+      schoolAddress: z.string().min(3, "School address is required"),
+      city: z.string().min(2, "City is required"),
+      state: z.string().min(2, "State is required"),
       adminEmail: z.string().email("Invalid email address"),
       adminPassword: z.string().min(8, "Password must be at least 8 characters"),
       adminFirstName: z.string().min(2, "First name is required"),
       adminLastName: z.string().min(2, "Last name is required"),
+      adminPhone: z.string().optional(),
     }),
   }),
 

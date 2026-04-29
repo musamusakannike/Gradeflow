@@ -1,8 +1,11 @@
 import { Response, NextFunction } from "express";
 import { Subject } from "../models/subject.model";
 import { ClassSubject } from "../models/class-subject.model";
+import { Class } from "../models/class.model";
+import { User } from "../models/user.model";
+import { Session } from "../models/session.model";
 import { sendSuccess } from "../utils/response.util";
-import { AuthenticatedRequest } from "../types";
+import { AuthenticatedRequest, UserRole } from "../types";
 import { NotFoundError, ConflictError } from "../utils/errors.util";
 
 class SubjectController {
@@ -124,6 +127,34 @@ class SubjectController {
       const schoolId = req.user!.schoolId;
       const { classId, subjectId, teacherId, sessionId } = req.body;
 
+      const [classDoc, subject, teacher, session] = await Promise.all([
+        Class.findOne({ _id: classId, schoolId }),
+        Subject.findOne({ _id: subjectId, schoolId, isActive: true }),
+        User.findOne({
+          _id: teacherId,
+          schoolId,
+          role: UserRole.TEACHER,
+          status: "active",
+        }),
+        Session.findOne({ _id: sessionId, schoolId }),
+      ]);
+
+      if (!classDoc) {
+        throw new NotFoundError("Class not found");
+      }
+
+      if (!subject) {
+        throw new NotFoundError("Active subject not found");
+      }
+
+      if (!teacher) {
+        throw new NotFoundError("Active teacher not found for this school");
+      }
+
+      if (!session) {
+        throw new NotFoundError("Session not found");
+      }
+
       // Check for existing assignment
       const existing = await ClassSubject.findOne({
         schoolId,
@@ -190,6 +221,16 @@ class SubjectController {
     try {
       const { id } = req.params;
       const schoolId = req.user!.schoolId;
+      const teacher = await User.findOne({
+        _id: req.body.teacherId,
+        schoolId,
+        role: UserRole.TEACHER,
+        status: "active",
+      });
+
+      if (!teacher) {
+        throw new NotFoundError("Active teacher not found for this school");
+      }
       
       const assignment = await ClassSubject.findOneAndUpdate(
         { _id: id, schoolId },

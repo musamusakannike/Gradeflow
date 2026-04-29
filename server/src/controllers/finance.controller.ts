@@ -2,9 +2,11 @@ import { Response, NextFunction } from "express";
 import { Types } from "mongoose";
 import * as paymentService from "../services/payment.service";
 import { FeeStatus } from "../models/fee-status.model";
+import { Student } from "../models/student.model";
+import { Term } from "../models/term.model";
 import { sendSuccess } from "../utils/response.util";
-import { AuthenticatedRequest } from "../types";
-import { BadRequestError, NotFoundError } from "../utils/errors.util";
+import { AuthenticatedRequest, UserRole } from "../types";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors.util";
 
 class FinanceController {
   /**
@@ -19,6 +21,22 @@ class FinanceController {
     try {
       const schoolId = req.user!.schoolId as unknown as Types.ObjectId;
       const { studentId, termId, amount, callbackUrl } = req.body;
+
+      const student = await Student.findOne({
+        _id: studentId,
+        schoolId,
+      }).select("userId");
+
+      if (!student) {
+        throw new NotFoundError("Student not found");
+      }
+
+      if (
+        req.user!.role === UserRole.STUDENT &&
+        student.userId.toString() !== req.user!._id.toString()
+      ) {
+        throw new ForbiddenError("Cannot initialize payment for another student");
+      }
 
       const result = await paymentService.initializePayment({
         studentId: new Types.ObjectId(studentId as string),
@@ -92,6 +110,18 @@ class FinanceController {
         schoolId, 
         studentId: new Types.ObjectId(studentId) 
       };
+
+      if (req.user!.role === UserRole.STUDENT) {
+        const student = await Student.findOne({
+          _id: studentId,
+          schoolId,
+          userId: req.user!._id,
+        }).select("_id");
+
+        if (!student) {
+          throw new ForbiddenError("Cannot view another student's fee status");
+        }
+      }
       
       if (termId) {
         query.termId = new Types.ObjectId(termId as string);
@@ -120,6 +150,19 @@ class FinanceController {
       const schoolId = req.user!.schoolId as unknown as Types.ObjectId;
       const updatedBy = req.user!._id;
       const { studentId, termId, amountExpected, amountPaid, notes } = req.body;
+
+      const [student, term] = await Promise.all([
+        Student.findOne({ _id: studentId, schoolId }).select("_id"),
+        Term.findOne({ _id: termId, schoolId }).select("_id"),
+      ]);
+
+      if (!student) {
+        throw new NotFoundError("Student not found");
+      }
+
+      if (!term) {
+        throw new NotFoundError("Term not found");
+      }
 
       let feeStatus = await FeeStatus.findOne({
         schoolId,
@@ -163,6 +206,18 @@ class FinanceController {
     try {
       const schoolId = req.user!.schoolId as unknown as Types.ObjectId;
       const studentId = req.params.studentId as string;
+
+      if (req.user!.role === UserRole.STUDENT) {
+        const student = await Student.findOne({
+          _id: studentId,
+          schoolId,
+          userId: req.user!._id,
+        }).select("_id");
+
+        if (!student) {
+          throw new ForbiddenError("Cannot view another student's payments");
+        }
+      }
 
       const history = await paymentService.getPaymentHistory(
         new Types.ObjectId(studentId),

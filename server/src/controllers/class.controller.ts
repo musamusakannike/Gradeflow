@@ -1,7 +1,8 @@
 import { Response, NextFunction } from "express";
 import { Class } from "../models/class.model";
+import { User } from "../models/user.model";
 import { sendSuccess } from "../utils/response.util";
-import { AuthenticatedRequest } from "../types";
+import { AuthenticatedRequest, UserRole } from "../types";
 import { NotFoundError } from "../utils/errors.util";
 
 class ClassController {
@@ -16,6 +17,21 @@ class ClassController {
   ): Promise<void> {
     try {
       const schoolId = req.user!.schoolId;
+      const { classTeacherId } = req.body;
+
+      if (classTeacherId) {
+        const teacher = await User.findOne({
+          _id: classTeacherId,
+          schoolId,
+          role: UserRole.TEACHER,
+          status: "active",
+        });
+
+        if (!teacher) {
+          throw new NotFoundError("Active teacher not found for this school");
+        }
+      }
+
       const classDoc = await Class.create({
         ...req.body,
         schoolId,
@@ -95,6 +111,20 @@ class ClassController {
     try {
       const { id } = req.params;
       const schoolId = req.user!.schoolId;
+      const { classTeacherId } = req.body;
+
+      if (classTeacherId) {
+        const teacher = await User.findOne({
+          _id: classTeacherId,
+          schoolId,
+          role: UserRole.TEACHER,
+          status: "active",
+        });
+
+        if (!teacher) {
+          throw new NotFoundError("Active teacher not found for this school");
+        }
+      }
 
       const classDoc = await Class.findOneAndUpdate(
         { _id: id, schoolId },

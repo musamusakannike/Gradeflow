@@ -79,6 +79,7 @@ const formatUserResponse = (user: UserDocument): LoginResponse["user"] => ({
  */
 export const registerSchool = async (data: {
   schoolName: string;
+  schoolCode?: string;
   schoolEmail: string;
   schoolPhone: string;
   schoolAddress: string;
@@ -106,9 +107,19 @@ export const registerSchool = async (data: {
     throw new ConflictError("User with this email already exists");
   }
 
+  if (data.schoolCode) {
+    const existingCode = await School.findOne({
+      code: data.schoolCode.toUpperCase(),
+    });
+    if (existingCode) {
+      throw new ConflictError("School with this code already exists");
+    }
+  }
+
   // Create school
   const school = await School.create({
     name: data.schoolName,
+    code: data.schoolCode?.toUpperCase(),
     email: data.schoolEmail.toLowerCase(),
     phone: data.schoolPhone,
     address: data.schoolAddress,
@@ -248,7 +259,7 @@ export const loginWithGoogle = async (
       googleId: uid,
       avatar: picture,
       role: "student",
-      schoolId,
+      schoolId: school._id,
       emailVerified: true,
       lastLogin: new Date(),
     });

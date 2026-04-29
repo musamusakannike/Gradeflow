@@ -73,9 +73,18 @@ const registerSchool = async (data) => {
     if (existingUser) {
         throw new errors_util_1.ConflictError("User with this email already exists");
     }
+    if (data.schoolCode) {
+        const existingCode = await school_model_1.School.findOne({
+            code: data.schoolCode.toUpperCase(),
+        });
+        if (existingCode) {
+            throw new errors_util_1.ConflictError("School with this code already exists");
+        }
+    }
     // Create school
     const school = await school_model_1.School.create({
         name: data.schoolName,
+        code: data.schoolCode?.toUpperCase(),
         email: data.schoolEmail.toLowerCase(),
         phone: data.schoolPhone,
         address: data.schoolAddress,
@@ -188,7 +197,7 @@ const loginWithGoogle = async (idToken, schoolId) => {
             googleId: uid,
             avatar: picture,
             role: "student",
-            schoolId,
+            schoolId: school._id,
             emailVerified: true,
             lastLogin: new Date(),
         });

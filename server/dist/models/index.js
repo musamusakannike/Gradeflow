@@ -25,4 +25,5 @@ __exportStar(require("./class-subject.model"), exports);
 __exportStar(require("./score.model"), exports);
 __exportStar(require("./fee-status.model"), exports);
 __exportStar(require("./payment.model"), exports);
+__exportStar(require("./result-batch.model"), exports);
 //# sourceMappingURL=index.js.map

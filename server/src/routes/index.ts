@@ -8,6 +8,7 @@ import studentRoutes from "./student.route";
 import scoreRoutes from "./score.route";
 import resultRoutes from "./result.route";
 import financeRoutes from "./finance.route";
+import schoolRoutes from "./school.route";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.use("/students", studentRoutes);
 router.use("/scores", scoreRoutes);
 router.use("/results", resultRoutes);
 router.use("/finance", financeRoutes);
+router.use("/school", schoolRoutes);
 
 // router.use("/schools", schoolRoutes);
 // router.use("/users", userRoutes);

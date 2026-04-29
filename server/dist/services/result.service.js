@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateGPA = exports.bulkEnterScores = exports.enterScores = exports.getSubjectResults = exports.getClassResults = exports.getStudentResult = exports.checkFeeStatus = void 0;
+exports.calculateGPA = exports.bulkEnterScores = exports.enterScores = exports.getSubjectResults = exports.getClassResults = exports.getStudentResult = exports.checkFeeStatus = exports.getResultBatchStatus = exports.unreleaseResultBatch = exports.releaseResultBatch = exports.compileResultBatch = void 0;
 const score_model_1 = require("../models/score.model");
 const student_model_1 = require("../models/student.model");
 const fee_status_model_1 = require("../models/fee-status.model");
@@ -8,9 +8,130 @@ const class_subject_model_1 = require("../models/class-subject.model");
 const term_model_1 = require("../models/term.model");
 const class_model_1 = require("../models/class.model");
 const user_model_1 = require("../models/user.model");
+const result_batch_model_1 = require("../models/result-batch.model");
 const errors_util_1 = require("../utils/errors.util");
 const logger_util_1 = require("../utils/logger.util");
 const helpers_util_1 = require("../utils/helpers.util");
+const getReleasedBatch = async (classId, termId, schoolId) => {
+    return result_batch_model_1.ResultBatch.findOne({
+        classId,
+        termId,
+        schoolId,
+        status: "released",
+    });
+};
+const ensureResultIsEditable = async (classId, termId, schoolId) => {
+    const released = await getReleasedBatch(classId, termId, schoolId);
+    if (released) {
+        throw new errors_util_1.ForbiddenError("Scores cannot be edited after results are released. Unrelease the result first.", "RESULT_RELEASED");
+    }
+};
+const ensureTeacherOwnsAssignment = (classSubject, teacherId) => {
+    if (!teacherId)
+        return;
+    if (classSubject.teacherId.toString() !== teacherId.toString()) {
+        throw new errors_util_1.ForbiddenError("You can only access scores for subjects assigned to you", "UNASSIGNED_SUBJECT");
+    }
+};
+const compileResultBatch = async (classId, termId, schoolId, compiledBy) => {
+    const [classDoc, term] = await Promise.all([
+        class_model_1.Class.findOne({ _id: classId, schoolId }),
+        term_model_1.Term.findOne({ _id: termId, schoolId }),
+    ]);
+    if (!classDoc) {
+        throw new errors_util_1.NotFoundError("Class not found");
+    }
+    if (!term) {
+        throw new errors_util_1.NotFoundError("Term not found");
+    }
+    const existing = await result_batch_model_1.ResultBatch.findOne({ classId, termId, schoolId });
+    if (existing?.status === "released") {
+        throw new errors_util_1.ForbiddenError("Released results cannot be recompiled. Unrelease the result first.", "RESULT_RELEASED");
+    }
+    const [totalStudents, totalSubjects, totalScores] = await Promise.all([
+        student_model_1.Student.countDocuments({ classId, schoolId, status: "active" }),
+        class_subject_model_1.ClassSubject.countDocuments({
+            classId,
+            schoolId,
+            sessionId: term.sessionId,
+        }),
+        score_model_1.Score.countDocuments({
+            schoolId,
+            termId,
+            classSubjectId: {
+                $in: await class_subject_model_1.ClassSubject.find({
+                    classId,
+                    schoolId,
+                    sessionId: term.sessionId,
+                }).distinct("_id"),
+            },
+        }),
+    ]);
+    if (totalStudents === 0) {
+        throw new errors_util_1.BadRequestError("No active students found in this class");
+    }
+    if (totalSubjects === 0) {
+        throw new errors_util_1.BadRequestError("No subjects assigned to this class for the session");
+    }
+    const batch = await result_batch_model_1.ResultBatch.findOneAndUpdate({ classId, termId, schoolId }, {
+        $set: {
+            status: "compiled",
+            totalStudents,
+            totalSubjects,
+            totalScores,
+            compiledBy,
+            compiledAt: new Date(),
+            releasedBy: null,
+            releasedAt: null,
+        },
+    }, { new: true, upsert: true, runValidators: true });
+    return batch;
+};
+exports.compileResultBatch = compileResultBatch;
+const releaseResultBatch = async (classId, termId, schoolId, releasedBy) => {
+    const batch = await result_batch_model_1.ResultBatch.findOne({ classId, termId, schoolId });
+    if (!batch) {
+        throw new errors_util_1.BadRequestError("Compile this class result before releasing it");
+    }
+    if (batch.status === "draft") {
+        throw new errors_util_1.BadRequestError("Compile this class result before releasing it");
+    }
+    batch.status = "released";
+    batch.releasedBy = releasedBy;
+    batch.releasedAt = new Date();
+    await batch.save();
+    return batch;
+};
+exports.releaseResultBatch = releaseResultBatch;
+const unreleaseResultBatch = async (classId, termId, schoolId, unreleasedBy) => {
+    const batch = await result_batch_model_1.ResultBatch.findOne({ classId, termId, schoolId });
+    if (!batch) {
+        throw new errors_util_1.NotFoundError("Result batch not found");
+    }
+    batch.status = "compiled";
+    batch.unreleasedBy = unreleasedBy;
+    batch.unreleasedAt = new Date();
+    batch.releasedBy = undefined;
+    batch.releasedAt = undefined;
+    await batch.save();
+    return batch;
+};
+exports.unreleaseResultBatch = unreleaseResultBatch;
+const getResultBatchStatus = async (classId, termId, schoolId) => {
+    const batch = await result_batch_model_1.ResultBatch.findOne({ classId, termId, schoolId })
+        .populate("classId", "name level section")
+        .populate("termId", "name termNumber");
+    return (batch || {
+        classId,
+        termId,
+        schoolId,
+        status: "draft",
+        totalStudents: 0,
+        totalSubjects: 0,
+        totalScores: 0,
+    });
+};
+exports.getResultBatchStatus = getResultBatchStatus;
 /**
  * Check if student has paid fees for a term
  */
@@ -28,7 +149,7 @@ exports.checkFeeStatus = checkFeeStatus;
  */
 const getStudentResult = async (studentId, termId, schoolId, checkFees = true) => {
     // Get student details
-    const student = await student_model_1.Student.findById(studentId).populate("userId");
+    const student = await student_model_1.Student.findOne({ _id: studentId, schoolId }).populate("userId");
     if (!student) {
         throw new errors_util_1.NotFoundError("Student not found");
     }
@@ -45,13 +166,19 @@ const getStudentResult = async (studentId, termId, schoolId, checkFees = true) =
     }
     // Get term details
     const term = await term_model_1.Term.findById(termId);
-    if (!term) {
+    if (!term || term.schoolId.toString() !== schoolId.toString()) {
         throw new errors_util_1.NotFoundError("Term not found");
     }
     // Get class details
-    const classDoc = await class_model_1.Class.findById(student.classId);
+    const classDoc = await class_model_1.Class.findOne({ _id: student.classId, schoolId });
     if (!classDoc) {
         throw new errors_util_1.NotFoundError("Class not found");
+    }
+    if (checkFees) {
+        const released = await getReleasedBatch(student.classId, termId, schoolId);
+        if (!released) {
+            throw new errors_util_1.ForbiddenError("Results have not been released for this term", "RESULT_NOT_RELEASED");
+        }
     }
     // Get all scores for the student in this term
     const scores = await score_model_1.Score.find({
@@ -151,7 +278,19 @@ exports.getClassResults = getClassResults;
 /**
  * Get subject results for a class
  */
-const getSubjectResults = async (classSubjectId, termId, schoolId) => {
+const getSubjectResults = async (classSubjectId, termId, schoolId, teacherId) => {
+    const classSubject = await class_subject_model_1.ClassSubject.findOne({
+        _id: classSubjectId,
+        schoolId,
+    });
+    if (!classSubject) {
+        throw new errors_util_1.NotFoundError("Class subject not found");
+    }
+    ensureTeacherOwnsAssignment(classSubject, teacherId);
+    const term = await term_model_1.Term.findOne({ _id: termId, schoolId });
+    if (!term) {
+        throw new errors_util_1.NotFoundError("Term not found");
+    }
     const scores = await score_model_1.Score.find({
         classSubjectId,
         termId,
@@ -198,7 +337,7 @@ exports.getSubjectResults = getSubjectResults;
 /**
  * Enter or update scores
  */
-const enterScores = async (data, schoolId) => {
+const enterScores = async (data, schoolId, teacherId) => {
     // Verify student exists and belongs to school
     const student = await student_model_1.Student.findOne({ _id: data.studentId, schoolId });
     if (!student) {
@@ -212,6 +351,15 @@ const enterScores = async (data, schoolId) => {
     if (!classSubject) {
         throw new errors_util_1.NotFoundError("Class subject not found");
     }
+    const term = await term_model_1.Term.findOne({ _id: data.termId, schoolId });
+    if (!term) {
+        throw new errors_util_1.NotFoundError("Term not found");
+    }
+    ensureTeacherOwnsAssignment(classSubject, teacherId);
+    if (student.classId.toString() !== classSubject.classId.toString()) {
+        throw new errors_util_1.BadRequestError("Student does not belong to this class subject's class");
+    }
+    await ensureResultIsEditable(classSubject.classId, data.termId, schoolId);
     // Find existing score or create new
     let score = await score_model_1.Score.findOne({
         studentId: data.studentId,
@@ -247,14 +395,37 @@ exports.enterScores = enterScores;
 /**
  * Bulk enter scores for a class subject
  */
-const bulkEnterScores = async (classSubjectId, termId, scores, schoolId) => {
+const bulkEnterScores = async (classSubjectId, termId, scores, schoolId, teacherId) => {
     const result = {
         updated: 0,
         created: 0,
         errors: [],
     };
+    const classSubject = await class_subject_model_1.ClassSubject.findOne({
+        _id: classSubjectId,
+        schoolId,
+    });
+    if (!classSubject) {
+        throw new errors_util_1.NotFoundError("Class subject not found");
+    }
+    ensureTeacherOwnsAssignment(classSubject, teacherId);
+    const term = await term_model_1.Term.findOne({ _id: termId, schoolId });
+    if (!term) {
+        throw new errors_util_1.NotFoundError("Term not found");
+    }
+    await ensureResultIsEditable(classSubject.classId, termId, schoolId);
     for (const scoreData of scores) {
         try {
+            const student = await student_model_1.Student.findOne({
+                _id: scoreData.studentId,
+                schoolId,
+            });
+            if (!student) {
+                throw new errors_util_1.NotFoundError("Student not found");
+            }
+            if (student.classId.toString() !== classSubject.classId.toString()) {
+                throw new errors_util_1.BadRequestError("Student does not belong to this class subject's class");
+            }
             const existing = await score_model_1.Score.findOne({
                 studentId: scoreData.studentId,
                 classSubjectId,

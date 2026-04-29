@@ -33,86 +33,89 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Payment = void 0;
+exports.ResultBatch = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const helpers_util_1 = require("../utils/helpers.util");
-const paymentSchema = new mongoose_1.Schema({
+const resultBatchSchema = new mongoose_1.Schema({
     schoolId: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'School',
-        required: [true, 'School is required'],
+        ref: "School",
+        required: [true, "School is required"],
     },
-    studentId: {
+    classId: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Student',
-        required: [true, 'Student is required'],
+        ref: "Class",
+        required: [true, "Class is required"],
     },
     termId: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Term',
-        required: [true, 'Term is required'],
-    },
-    amount: {
-        type: Number,
-        required: [true, 'Amount is required'],
-        min: [100, 'Minimum payment is 100 NGN'],
-    },
-    reference: {
-        type: String,
-        required: [true, 'Reference is required'],
-        unique: true,
-    },
-    paystackReference: {
-        type: String,
-        sparse: true,
-        unique: true,
+        ref: "Term",
+        required: [true, "Term is required"],
     },
     status: {
         type: String,
-        enum: ['pending', 'success', 'failed', 'abandoned'],
-        default: 'pending',
+        enum: ["draft", "compiled", "released"],
+        default: "draft",
     },
-    paidAt: {
+    totalStudents: {
+        type: Number,
+        default: 0,
+        min: [0, "Total students cannot be negative"],
+    },
+    totalSubjects: {
+        type: Number,
+        default: 0,
+        min: [0, "Total subjects cannot be negative"],
+    },
+    totalScores: {
+        type: Number,
+        default: 0,
+        min: [0, "Total scores cannot be negative"],
+    },
+    compiledBy: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+        required: [true, "Compiler is required"],
+    },
+    compiledAt: {
+        type: Date,
+        default: Date.now,
+    },
+    releasedBy: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    releasedAt: {
         type: Date,
         default: null,
     },
-    channel: {
-        type: String,
+    unreleasedBy: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
         default: null,
     },
-    metadata: {
-        type: mongoose_1.Schema.Types.Mixed,
-        default: {},
+    unreleasedAt: {
+        type: Date,
+        default: null,
     },
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
 });
-// Indexes
-paymentSchema.index({ schoolId: 1, studentId: 1 });
-paymentSchema.index({ schoolId: 1, termId: 1 });
-paymentSchema.index({ status: 1 });
-paymentSchema.index({ createdAt: -1 });
-// Generate reference before validation
-paymentSchema.pre('validate', function () {
-    if (!this.reference) {
-        this.reference = `GF-${(0, helpers_util_1.generateId)()}`;
-    }
-});
-// Virtual for student
-paymentSchema.virtual('student', {
-    ref: 'Student',
-    localField: 'studentId',
-    foreignField: '_id',
+resultBatchSchema.index({ schoolId: 1, classId: 1, termId: 1 }, { unique: true });
+resultBatchSchema.index({ schoolId: 1, termId: 1, status: 1 });
+resultBatchSchema.virtual("class", {
+    ref: "Class",
+    localField: "classId",
+    foreignField: "_id",
     justOne: true,
 });
-// Virtual for term
-paymentSchema.virtual('term', {
-    ref: 'Term',
-    localField: 'termId',
-    foreignField: '_id',
+resultBatchSchema.virtual("term", {
+    ref: "Term",
+    localField: "termId",
+    foreignField: "_id",
     justOne: true,
 });
-exports.Payment = mongoose_1.default.model('Payment', paymentSchema);
-//# sourceMappingURL=payment.model.js.map
+exports.ResultBatch = mongoose_1.default.model("ResultBatch", resultBatchSchema);
+//# sourceMappingURL=result-batch.model.js.map

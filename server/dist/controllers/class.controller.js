@@ -2,7 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.classController = void 0;
 const class_model_1 = require("../models/class.model");
+const user_model_1 = require("../models/user.model");
 const response_util_1 = require("../utils/response.util");
+const types_1 = require("../types");
 const errors_util_1 = require("../utils/errors.util");
 class ClassController {
     /**
@@ -12,6 +14,18 @@ class ClassController {
     async createClass(req, res, next) {
         try {
             const schoolId = req.user.schoolId;
+            const { classTeacherId } = req.body;
+            if (classTeacherId) {
+                const teacher = await user_model_1.User.findOne({
+                    _id: classTeacherId,
+                    schoolId,
+                    role: types_1.UserRole.TEACHER,
+                    status: "active",
+                });
+                if (!teacher) {
+                    throw new errors_util_1.NotFoundError("Active teacher not found for this school");
+                }
+            }
             const classDoc = await class_model_1.Class.create({
                 ...req.body,
                 schoolId,
@@ -74,6 +88,18 @@ class ClassController {
         try {
             const { id } = req.params;
             const schoolId = req.user.schoolId;
+            const { classTeacherId } = req.body;
+            if (classTeacherId) {
+                const teacher = await user_model_1.User.findOne({
+                    _id: classTeacherId,
+                    schoolId,
+                    role: types_1.UserRole.TEACHER,
+                    status: "active",
+                });
+                if (!teacher) {
+                    throw new errors_util_1.NotFoundError("Active teacher not found for this school");
+                }
+            }
             const classDoc = await class_model_1.Class.findOneAndUpdate({ _id: id, schoolId }, req.body, { new: true, runValidators: true });
             if (!classDoc) {
                 throw new errors_util_1.NotFoundError("Class not found");

@@ -40,7 +40,10 @@ export const initializePayment = async (
   const paystack = getPaystackClient();
 
   // Get student details
-  const student = await Student.findById(data.studentId).populate("userId");
+  const student = await Student.findOne({
+    _id: data.studentId,
+    schoolId: data.schoolId,
+  }).populate("userId");
   if (!student) {
     throw new NotFoundError("Student not found");
   }
@@ -51,7 +54,10 @@ export const initializePayment = async (
   }
 
   // Get term details
-  const term = await Term.findById(data.termId);
+  const term = await Term.findOne({
+    _id: data.termId,
+    schoolId: data.schoolId,
+  });
   if (!term) {
     throw new NotFoundError("Term not found");
   }
@@ -154,6 +160,7 @@ export const verifyPayment = async (
 
   // If already verified, return
   if (payment.status === "success") {
+    await updateFeeStatus(payment);
     return payment;
   }
 
@@ -285,6 +292,10 @@ const handleChargeFailed = async (
 const updateFeeStatus = async (
   payment: InstanceType<typeof Payment>,
 ): Promise<void> => {
+  if (payment.metadata?.feeApplied === true) {
+    return;
+  }
+
   // Find or create fee status
   let feeStatus = await FeeStatus.findOne({
     schoolId: payment.schoolId,
@@ -308,6 +319,11 @@ const updateFeeStatus = async (
     // If no fee status exists, create one (should not normally happen)
     logger.warn("Fee status not found for payment, creating new one");
 
+    const student = await Student.findOne({
+      _id: payment.studentId,
+      schoolId: payment.schoolId,
+    }).select("userId");
+
     await FeeStatus.create({
       schoolId: payment.schoolId,
       studentId: payment.studentId,
@@ -316,9 +332,15 @@ const updateFeeStatus = async (
       amountPaid: payment.amount,
       balance: 0,
       status: "paid",
-      updatedBy: payment.studentId, // Will be updated by system
+      updatedBy: student?.userId || payment.studentId,
     });
   }
+
+  payment.metadata = {
+    ...(payment.metadata || {}),
+    feeApplied: true,
+  };
+  await payment.save();
 };
 
 /**

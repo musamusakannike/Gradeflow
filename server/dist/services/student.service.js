@@ -26,28 +26,41 @@ class StudentService {
             // Verify class exists and belongs to school
             const classDoc = await models_1.Class.findOne({
                 _id: data.classId,
-                school: data.schoolId,
-                isActive: true,
+                schoolId: data.schoolId,
             });
             if (!classDoc) {
-                throw new errors_util_1.AppError("Class not found", 404);
+                throw new errors_util_1.NotFoundError("Class not found");
+            }
+            const school = await models_1.School.findById(data.schoolId).select("code");
+            if (!school) {
+                throw new errors_util_1.NotFoundError("School not found");
+            }
+            if (data.email) {
+                const existingUser = await models_1.User.findOne({
+                    email: data.email.toLowerCase(),
+                });
+                if (existingUser) {
+                    throw new errors_util_1.ConflictError("User with this email already exists");
+                }
             }
             // Generate student ID
-            const schoolPrefix = data.schoolId.substring(0, 3).toUpperCase();
             const currentYear = new Date().getFullYear();
-            const studentId = (0, helpers_util_1.generateStudentId)(schoolPrefix, currentYear);
+            const studentId = (0, helpers_util_1.generateStudentId)(school.code, currentYear);
             // Generate password for student account
             const password = (0, helpers_util_1.generateSecurePassword)();
-            const hashedPassword = await (0, helpers_util_1.hashPassword)(password);
+            const loginEmail = data.email ||
+                `${studentId.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}@student.gradeflow.local`;
             // Create user account for student
             const user = new models_1.User({
-                email: data.email || `${studentId.toLowerCase()}@student.gradeflow.com`,
-                password: hashedPassword,
+                email: loginEmail.toLowerCase(),
+                password,
                 firstName: data.firstName,
                 lastName: data.lastName,
+                phone: data.phoneNumber,
                 role: types_1.UserRole.STUDENT,
-                school: data.schoolId,
-                isActive: true,
+                schoolId: data.schoolId,
+                status: "active",
+                emailVerified: false,
             });
             await user.save({ session });
             // Create student record
@@ -55,14 +68,9 @@ class StudentService {
                 userId: user._id,
                 schoolId: data.schoolId,
                 studentId,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                middleName: data.middleName,
-                email: data.email,
-                dateOfBirth: data.dateOfBirth,
+                dateOfBirth: data.dateOfBirth || new Date("2000-01-01"),
                 gender: data.gender,
                 address: data.address,
-                phoneNumber: data.phoneNumber,
                 parentName: data.guardianName,
                 parentEmail: data.guardianEmail,
                 parentPhone: data.guardianPhone,
@@ -78,7 +86,7 @@ class StudentService {
                     await (0, email_service_1.sendStudentCredentials)(data.guardianEmail, {
                         studentName: `${data.firstName} ${data.lastName}`,
                         studentId,
-                        loginEmail: user.email,
+                        loginEmail,
                         password,
                         guardianName: data.guardianName,
                     });
@@ -105,8 +113,8 @@ class StudentService {
             _id: studentId,
             schoolId: schoolId,
         })
-            .populate("user", "email isActive lastLogin")
-            .populate("currentClass", "name section");
+            .populate("user", "email status lastLogin firstName lastName phone")
+            .populate("class", "name section level");
         if (!student) {
             throw new errors_util_1.AppError("Student not found", 404);
         }
@@ -120,8 +128,8 @@ class StudentService {
             studentId: studentIdNumber,
             schoolId: schoolId,
         })
-            .populate("user", "email isActive lastLogin")
-            .populate("currentClass", "name section");
+            .populate("user", "email status lastLogin firstName lastName phone")
+            .populate("class", "name section level");
         if (!student) {
             throw new errors_util_1.AppError("Student not found", 404);
         }
@@ -137,20 +145,28 @@ class StudentService {
         if (status) {
             query.status = status;
         }
-        if (classId) {
-            query.currentClass = classId;
-        }
         if (search) {
+            const matchingUsers = await models_1.User.find({
+                schoolId,
+                role: types_1.UserRole.STUDENT,
+                $or: [
+                    { firstName: { $regex: search, $options: "i" } },
+                    { lastName: { $regex: search, $options: "i" } },
+                    { email: { $regex: search, $options: "i" } },
+                ],
+            }).select("_id");
             query.$or = [
-                { firstName: { $regex: search, $options: "i" } },
-                { lastName: { $regex: search, $options: "i" } },
                 { studentId: { $regex: search, $options: "i" } },
+                { userId: { $in: matchingUsers.map((user) => user._id) } },
             ];
+        }
+        if (classId) {
+            query.classId = classId;
         }
         const [students, total] = await Promise.all([
             models_1.Student.find(query)
-                .populate("user", "email isActive")
-                .populate("currentClass", "name section")
+                .populate("user", "email status firstName lastName")
+                .populate("class", "name section level")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -172,28 +188,61 @@ class StudentService {
             schoolId,
             status: types_1.StudentStatus.ACTIVE,
         })
-            .populate("user", "email isActive")
-            .sort({ lastName: 1, firstName: 1 });
+            .populate("user", "email status firstName lastName")
+            .sort({ studentId: 1 });
         return students;
     }
     /**
      * Update student
      */
     async updateStudent(studentId, schoolId, data) {
-        const student = await models_1.Student.findOneAndUpdate({ _id: studentId, schoolId: schoolId }, { $set: data }, { new: true, runValidators: true })
-            .populate("user", "email isActive")
-            .populate("currentClass", "name section");
+        if (data.classId) {
+            const classDoc = await models_1.Class.findOne({ _id: data.classId, schoolId });
+            if (!classDoc) {
+                throw new errors_util_1.NotFoundError("Class not found");
+            }
+        }
+        if (data.email) {
+            const existingUser = await models_1.User.findOne({
+                email: data.email.toLowerCase(),
+                schoolId,
+            });
+            if (existingUser) {
+                const currentStudent = await models_1.Student.findOne({ _id: studentId, schoolId });
+                if (!currentStudent || existingUser._id.toString() !== currentStudent.userId.toString()) {
+                    throw new errors_util_1.ConflictError("User with this email already exists");
+                }
+            }
+        }
+        const studentUpdates = {
+            ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
+            ...(data.gender && { gender: data.gender }),
+            ...(data.address !== undefined && { address: data.address }),
+            ...(data.guardianName !== undefined && { parentName: data.guardianName }),
+            ...(data.guardianEmail !== undefined && { parentEmail: data.guardianEmail }),
+            ...(data.guardianPhone !== undefined && { parentPhone: data.guardianPhone }),
+            ...(data.classId && { classId: data.classId }),
+            ...(data.status && { status: data.status }),
+        };
+        const student = await models_1.Student.findOneAndUpdate({ _id: studentId, schoolId: schoolId }, { $set: studentUpdates }, { new: true, runValidators: true })
+            .populate("user", "email status firstName lastName phone")
+            .populate("class", "name section level");
         if (!student) {
             throw new errors_util_1.AppError("Student not found", 404);
         }
         // Update user record if name changed
-        if (data.firstName || data.lastName) {
+        if (data.firstName || data.lastName || data.email || data.phoneNumber || data.status) {
             await models_1.User.findByIdAndUpdate(student.userId, {
                 $set: {
                     ...(data.firstName && { firstName: data.firstName }),
                     ...(data.lastName && { lastName: data.lastName }),
+                    ...(data.email && { email: data.email.toLowerCase() }),
+                    ...(data.phoneNumber !== undefined && { phone: data.phoneNumber }),
+                    ...(data.status && {
+                        status: data.status === types_1.StudentStatus.ACTIVE ? "active" : "inactive",
+                    }),
                 },
-            });
+            }, { runValidators: true });
         }
         return student;
     }
@@ -204,15 +253,14 @@ class StudentService {
         // Verify new class exists
         const newClass = await models_1.Class.findOne({
             _id: newClassId,
-            school: schoolId,
-            isActive: true,
+            schoolId,
         });
         if (!newClass) {
             throw new errors_util_1.AppError("New class not found", 404);
         }
         const student = await models_1.Student.findOneAndUpdate({ _id: studentId, schoolId: schoolId }, { $set: { classId: newClassId } }, { new: true })
-            .populate("user", "email isActive")
-            .populate("currentClass", "name section");
+            .populate("user", "email status firstName lastName")
+            .populate("class", "name section level");
         if (!student) {
             throw new errors_util_1.AppError("Student not found", 404);
         }
@@ -223,15 +271,18 @@ class StudentService {
      */
     async updateStudentStatus(studentId, schoolId, status) {
         const student = await models_1.Student.findOneAndUpdate({ _id: studentId, schoolId: schoolId }, { $set: { status } }, { new: true })
-            .populate("user", "email isActive")
-            .populate("currentClass", "name section");
+            .populate("user", "email status firstName lastName")
+            .populate("class", "name section level");
         if (!student) {
             throw new errors_util_1.AppError("Student not found", 404);
         }
         // If student is graduated or transferred, deactivate user account
         if (status === types_1.StudentStatus.GRADUATED ||
             status === types_1.StudentStatus.TRANSFERRED) {
-            await models_1.User.findByIdAndUpdate(student.userId, { isActive: false });
+            await models_1.User.findByIdAndUpdate(student.userId, { status: "inactive" });
+        }
+        else if (status === types_1.StudentStatus.ACTIVE) {
+            await models_1.User.findByIdAndUpdate(student.userId, { status: "active" });
         }
         return student;
     }
@@ -247,8 +298,7 @@ class StudentService {
         // Verify class exists
         const classDoc = await models_1.Class.findOne({
             _id: classId,
-            school: schoolId,
-            isActive: true,
+            schoolId,
         });
         if (!classDoc) {
             throw new errors_util_1.AppError("Class not found", 404);
@@ -291,7 +341,7 @@ class StudentService {
                 throw new errors_util_1.AppError("Student not found", 404);
             }
             // Deactivate user account
-            await models_1.User.findByIdAndUpdate(student.userId, { isActive: false }, { session });
+            await models_1.User.findByIdAndUpdate(student.userId, { status: "inactive" }, { session });
             // Update student status
             await models_1.Student.findByIdAndUpdate(studentId, { status: types_1.StudentStatus.TRANSFERRED }, { session });
             await session.commitTransaction();
@@ -322,7 +372,7 @@ class StudentService {
                 },
                 {
                     $group: {
-                        _id: "$currentClass",
+                        _id: "$classId",
                         count: { $sum: 1 },
                     },
                 },

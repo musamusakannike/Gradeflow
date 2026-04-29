@@ -37,7 +37,10 @@ exports.financeController = void 0;
 const mongoose_1 = require("mongoose");
 const paymentService = __importStar(require("../services/payment.service"));
 const fee_status_model_1 = require("../models/fee-status.model");
+const student_model_1 = require("../models/student.model");
+const term_model_1 = require("../models/term.model");
 const response_util_1 = require("../utils/response.util");
+const types_1 = require("../types");
 const errors_util_1 = require("../utils/errors.util");
 class FinanceController {
     /**
@@ -48,6 +51,17 @@ class FinanceController {
         try {
             const schoolId = req.user.schoolId;
             const { studentId, termId, amount, callbackUrl } = req.body;
+            const student = await student_model_1.Student.findOne({
+                _id: studentId,
+                schoolId,
+            }).select("userId");
+            if (!student) {
+                throw new errors_util_1.NotFoundError("Student not found");
+            }
+            if (req.user.role === types_1.UserRole.STUDENT &&
+                student.userId.toString() !== req.user._id.toString()) {
+                throw new errors_util_1.ForbiddenError("Cannot initialize payment for another student");
+            }
             const result = await paymentService.initializePayment({
                 studentId: new mongoose_1.Types.ObjectId(studentId),
                 termId: new mongoose_1.Types.ObjectId(termId),
@@ -105,6 +119,16 @@ class FinanceController {
                 schoolId,
                 studentId: new mongoose_1.Types.ObjectId(studentId)
             };
+            if (req.user.role === types_1.UserRole.STUDENT) {
+                const student = await student_model_1.Student.findOne({
+                    _id: studentId,
+                    schoolId,
+                    userId: req.user._id,
+                }).select("_id");
+                if (!student) {
+                    throw new errors_util_1.ForbiddenError("Cannot view another student's fee status");
+                }
+            }
             if (termId) {
                 query.termId = new mongoose_1.Types.ObjectId(termId);
             }
@@ -126,6 +150,16 @@ class FinanceController {
             const schoolId = req.user.schoolId;
             const updatedBy = req.user._id;
             const { studentId, termId, amountExpected, amountPaid, notes } = req.body;
+            const [student, term] = await Promise.all([
+                student_model_1.Student.findOne({ _id: studentId, schoolId }).select("_id"),
+                term_model_1.Term.findOne({ _id: termId, schoolId }).select("_id"),
+            ]);
+            if (!student) {
+                throw new errors_util_1.NotFoundError("Student not found");
+            }
+            if (!term) {
+                throw new errors_util_1.NotFoundError("Term not found");
+            }
             let feeStatus = await fee_status_model_1.FeeStatus.findOne({
                 schoolId,
                 studentId: new mongoose_1.Types.ObjectId(studentId),
@@ -164,6 +198,16 @@ class FinanceController {
         try {
             const schoolId = req.user.schoolId;
             const studentId = req.params.studentId;
+            if (req.user.role === types_1.UserRole.STUDENT) {
+                const student = await student_model_1.Student.findOne({
+                    _id: studentId,
+                    schoolId,
+                    userId: req.user._id,
+                }).select("_id");
+                if (!student) {
+                    throw new errors_util_1.ForbiddenError("Cannot view another student's payments");
+                }
+            }
             const history = await paymentService.getPaymentHistory(new mongoose_1.Types.ObjectId(studentId), schoolId);
             (0, response_util_1.sendSuccess)(res, history, "Payment history retrieved successfully");
         }

@@ -2,7 +2,7 @@ import { Response, NextFunction } from "express";
 import { Types } from "mongoose";
 import * as resultService from "../services/result.service";
 import { sendSuccess } from "../utils/response.util";
-import { AuthenticatedRequest } from "../types";
+import { AuthenticatedRequest, UserRole } from "../types";
 import { BadRequestError } from "../utils/errors.util";
 
 class ScoreController {
@@ -26,7 +26,8 @@ class ScoreController {
           termId: new Types.ObjectId(termId as string),
           ...scoreData,
         },
-        schoolId
+        schoolId,
+        req.user!.role === UserRole.TEACHER ? req.user!._id : undefined,
       );
 
       sendSuccess(res, score, "Score recorded successfully");
@@ -57,7 +58,8 @@ class ScoreController {
         new Types.ObjectId(classSubjectId as string),
         new Types.ObjectId(termId as string),
         formattedScores,
-        schoolId
+        schoolId,
+        req.user!.role === UserRole.TEACHER ? req.user!._id : undefined,
       );
 
       sendSuccess(res, result, "Bulk score entry completed");
@@ -87,7 +89,8 @@ class ScoreController {
       const result = await resultService.getSubjectResults(
         new Types.ObjectId(classSubjectId),
         new Types.ObjectId(termId as string),
-        schoolId
+        schoolId,
+        req.user!.role === UserRole.TEACHER ? req.user!._id : undefined,
       );
 
       sendSuccess(res, result, "Subject scores retrieved successfully");

@@ -36,10 +36,57 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resultController = void 0;
 const mongoose_1 = require("mongoose");
 const resultService = __importStar(require("../services/result.service"));
+const student_model_1 = require("../models/student.model");
+const class_model_1 = require("../models/class.model");
+const class_subject_model_1 = require("../models/class-subject.model");
 const response_util_1 = require("../utils/response.util");
 const types_1 = require("../types");
 const errors_util_1 = require("../utils/errors.util");
 class ResultController {
+    async compileResult(req, res, next) {
+        try {
+            const schoolId = req.user.schoolId;
+            const { classId, termId } = req.body;
+            const batch = await resultService.compileResultBatch(new mongoose_1.Types.ObjectId(classId), new mongoose_1.Types.ObjectId(termId), schoolId, req.user._id);
+            (0, response_util_1.sendSuccess)(res, batch, "Result compiled successfully");
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    async releaseResult(req, res, next) {
+        try {
+            const schoolId = req.user.schoolId;
+            const { classId, termId } = req.body;
+            const batch = await resultService.releaseResultBatch(new mongoose_1.Types.ObjectId(classId), new mongoose_1.Types.ObjectId(termId), schoolId, req.user._id);
+            (0, response_util_1.sendSuccess)(res, batch, "Result released successfully");
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    async unreleaseResult(req, res, next) {
+        try {
+            const schoolId = req.user.schoolId;
+            const { classId, termId } = req.body;
+            const batch = await resultService.unreleaseResultBatch(new mongoose_1.Types.ObjectId(classId), new mongoose_1.Types.ObjectId(termId), schoolId, req.user._id);
+            (0, response_util_1.sendSuccess)(res, batch, "Result unreleased successfully");
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    async getResultStatus(req, res, next) {
+        try {
+            const schoolId = req.user.schoolId;
+            const { classId, termId } = req.query;
+            const batch = await resultService.getResultBatchStatus(new mongoose_1.Types.ObjectId(classId), new mongoose_1.Types.ObjectId(termId), schoolId);
+            (0, response_util_1.sendSuccess)(res, batch, "Result status retrieved successfully");
+        }
+        catch (error) {
+            next(error);
+        }
+    }
     /**
      * Get student result for a term
      * GET /api/v1/results/student/:studentId
@@ -54,6 +101,16 @@ class ResultController {
             }
             // Check if student belongs to school and user has permission
             const checkFees = req.user.role === types_1.UserRole.STUDENT;
+            if (req.user.role === types_1.UserRole.STUDENT) {
+                const student = await student_model_1.Student.findOne({
+                    _id: studentId,
+                    schoolId,
+                    userId: req.user._id,
+                }).select("_id");
+                if (!student) {
+                    throw new errors_util_1.ForbiddenError("Cannot access another student's result");
+                }
+            }
             const result = await resultService.getStudentResult(new mongoose_1.Types.ObjectId(studentId), new mongoose_1.Types.ObjectId(termId), schoolId, checkFees);
             (0, response_util_1.sendSuccess)(res, result, "Result retrieved successfully");
         }
@@ -72,6 +129,23 @@ class ResultController {
             const { termId } = req.query;
             if (!termId) {
                 throw new errors_util_1.BadRequestError("Term ID is required");
+            }
+            if (req.user.role === types_1.UserRole.TEACHER) {
+                const [classDoc, assignedSubject] = await Promise.all([
+                    class_model_1.Class.findOne({
+                        _id: classId,
+                        schoolId,
+                        classTeacherId: req.user._id,
+                    }).select("_id"),
+                    class_subject_model_1.ClassSubject.findOne({
+                        classId,
+                        schoolId,
+                        teacherId: req.user._id,
+                    }).select("_id"),
+                ]);
+                if (!classDoc && !assignedSubject) {
+                    throw new errors_util_1.ForbiddenError("Cannot view results for this class");
+                }
             }
             const results = await resultService.getClassResults(new mongoose_1.Types.ObjectId(classId), new mongoose_1.Types.ObjectId(termId), schoolId);
             (0, response_util_1.sendSuccess)(res, results, "Class results retrieved successfully");

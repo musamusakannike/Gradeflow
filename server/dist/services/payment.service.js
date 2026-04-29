@@ -21,7 +21,10 @@ const email_service_1 = require("./email.service");
 const initializePayment = async (data) => {
     const paystack = (0, paystack_config_1.getPaystackClient)();
     // Get student details
-    const student = await student_model_1.Student.findById(data.studentId).populate("userId");
+    const student = await student_model_1.Student.findOne({
+        _id: data.studentId,
+        schoolId: data.schoolId,
+    }).populate("userId");
     if (!student) {
         throw new errors_util_1.NotFoundError("Student not found");
     }
@@ -30,7 +33,10 @@ const initializePayment = async (data) => {
         throw new errors_util_1.NotFoundError("User not found");
     }
     // Get term details
-    const term = await term_model_1.Term.findById(data.termId);
+    const term = await term_model_1.Term.findOne({
+        _id: data.termId,
+        schoolId: data.schoolId,
+    });
     if (!term) {
         throw new errors_util_1.NotFoundError("Term not found");
     }
@@ -120,6 +126,7 @@ const verifyPayment = async (reference) => {
     }
     // If already verified, return
     if (payment.status === "success") {
+        await updateFeeStatus(payment);
         return payment;
     }
     try {
@@ -224,6 +231,9 @@ const handleChargeFailed = async (data) => {
  * Update fee status after successful payment
  */
 const updateFeeStatus = async (payment) => {
+    if (payment.metadata?.feeApplied === true) {
+        return;
+    }
     // Find or create fee status
     let feeStatus = await fee_status_model_1.FeeStatus.findOne({
         schoolId: payment.schoolId,
@@ -245,6 +255,10 @@ const updateFeeStatus = async (payment) => {
     else {
         // If no fee status exists, create one (should not normally happen)
         logger_util_1.logger.warn("Fee status not found for payment, creating new one");
+        const student = await student_model_1.Student.findOne({
+            _id: payment.studentId,
+            schoolId: payment.schoolId,
+        }).select("userId");
         await fee_status_model_1.FeeStatus.create({
             schoolId: payment.schoolId,
             studentId: payment.studentId,
@@ -253,9 +267,14 @@ const updateFeeStatus = async (payment) => {
             amountPaid: payment.amount,
             balance: 0,
             status: "paid",
-            updatedBy: payment.studentId, // Will be updated by system
+            updatedBy: student?.userId || payment.studentId,
         });
     }
+    payment.metadata = {
+        ...(payment.metadata || {}),
+        feeApplied: true,
+    };
+    await payment.save();
 };
 /**
  * Send payment confirmation email

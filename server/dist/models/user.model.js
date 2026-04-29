@@ -130,7 +130,6 @@ userSchema.virtual("fullName").get(function () {
 });
 // Indexes
 userSchema.index({ schoolId: 1, role: 1 });
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 // Hash password before saving

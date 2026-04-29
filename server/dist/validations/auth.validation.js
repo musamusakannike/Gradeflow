@@ -9,11 +9,17 @@ exports.authValidation = {
     registerSchool: zod_1.z.object({
         body: zod_1.z.object({
             schoolName: zod_1.z.string().min(3, "School name must be at least 3 characters"),
-            schoolCode: zod_1.z.string().min(2, "School code must be at least 2 characters"),
+            schoolCode: zod_1.z.string().min(2, "School code must be at least 2 characters").max(10).optional(),
+            schoolEmail: zod_1.z.string().email("Invalid school email address"),
+            schoolPhone: zod_1.z.string().min(3, "School phone is required"),
+            schoolAddress: zod_1.z.string().min(3, "School address is required"),
+            city: zod_1.z.string().min(2, "City is required"),
+            state: zod_1.z.string().min(2, "State is required"),
             adminEmail: zod_1.z.string().email("Invalid email address"),
             adminPassword: zod_1.z.string().min(8, "Password must be at least 8 characters"),
             adminFirstName: zod_1.z.string().min(2, "First name is required"),
             adminLastName: zod_1.z.string().min(2, "Last name is required"),
+            adminPhone: zod_1.z.string().optional(),
         }),
     }),
     login: zod_1.z.object({

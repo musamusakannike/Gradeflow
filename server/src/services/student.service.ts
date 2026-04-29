@@ -1,11 +1,7 @@
 import mongoose from "mongoose";
-import { Student, User, Class, FeeStatus, Score } from "../models";
-import { AppError } from "../utils/errors.util";
-import {
-  generateStudentId,
-  generateSecurePassword,
-  hashPassword,
-} from "../utils/helpers.util";
+import { Student, User, Class, FeeStatus, School } from "../models";
+import { AppError, ConflictError, NotFoundError } from "../utils/errors.util";
+import { generateStudentId, generateSecurePassword } from "../utils/helpers.util";
 import { sendStudentCredentials } from "./email.service";
 import { logger } from "../utils/logger.util";
 import { IStudent, StudentStatus, UserRole } from "../types";
@@ -42,6 +38,8 @@ export interface UpdateStudentData {
   guardianPhone?: string;
   guardianRelationship?: string;
   profileImage?: string;
+  classId?: string;
+  status?: StudentStatus;
 }
 
 export interface BulkStudentData {
@@ -73,32 +71,48 @@ class StudentService {
       // Verify class exists and belongs to school
       const classDoc = await Class.findOne({
         _id: data.classId,
-        school: data.schoolId,
-        isActive: true,
+        schoolId: data.schoolId,
       });
 
       if (!classDoc) {
-        throw new AppError("Class not found", 404);
+        throw new NotFoundError("Class not found");
+      }
+
+      const school = await School.findById(data.schoolId).select("code");
+      if (!school) {
+        throw new NotFoundError("School not found");
+      }
+
+      if (data.email) {
+        const existingUser = await User.findOne({
+          email: data.email.toLowerCase(),
+        });
+        if (existingUser) {
+          throw new ConflictError("User with this email already exists");
+        }
       }
 
       // Generate student ID
-      const schoolPrefix = data.schoolId.substring(0, 3).toUpperCase();
       const currentYear = new Date().getFullYear();
-      const studentId = generateStudentId(schoolPrefix, currentYear);
+      const studentId = generateStudentId(school.code, currentYear);
 
       // Generate password for student account
       const password = generateSecurePassword();
-      const hashedPassword = await hashPassword(password);
+      const loginEmail =
+        data.email ||
+        `${studentId.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}@student.gradeflow.local`;
 
       // Create user account for student
       const user = new User({
-        email: data.email || `${studentId.toLowerCase()}@student.gradeflow.com`,
-        password: hashedPassword,
+        email: loginEmail.toLowerCase(),
+        password,
         firstName: data.firstName,
         lastName: data.lastName,
+        phone: data.phoneNumber,
         role: UserRole.STUDENT,
-        school: data.schoolId,
-        isActive: true,
+        schoolId: data.schoolId,
+        status: "active",
+        emailVerified: false,
       });
 
       await user.save({ session });
@@ -108,14 +122,9 @@ class StudentService {
         userId: user._id,
         schoolId: data.schoolId,
         studentId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        middleName: data.middleName,
-        email: data.email,
-        dateOfBirth: data.dateOfBirth,
+        dateOfBirth: data.dateOfBirth || new Date("2000-01-01"),
         gender: data.gender,
         address: data.address,
-        phoneNumber: data.phoneNumber,
         parentName: data.guardianName,
         parentEmail: data.guardianEmail,
         parentPhone: data.guardianPhone,
@@ -134,7 +143,7 @@ class StudentService {
           await sendStudentCredentials(data.guardianEmail, {
             studentName: `${data.firstName} ${data.lastName}`,
             studentId,
-            loginEmail: user.email,
+            loginEmail,
             password,
             guardianName: data.guardianName,
           });
@@ -160,8 +169,8 @@ class StudentService {
       _id: studentId,
       schoolId: schoolId,
     })
-      .populate("user", "email isActive lastLogin")
-      .populate("currentClass", "name section");
+      .populate("user", "email status lastLogin firstName lastName phone")
+      .populate("class", "name section level");
 
     if (!student) {
       throw new AppError("Student not found", 404);
@@ -181,8 +190,8 @@ class StudentService {
       studentId: studentIdNumber,
       schoolId: schoolId,
     })
-      .populate("user", "email isActive lastLogin")
-      .populate("currentClass", "name section");
+      .populate("user", "email status lastLogin firstName lastName phone")
+      .populate("class", "name section level");
 
     if (!student) {
       throw new AppError("Student not found", 404);
@@ -218,22 +227,31 @@ class StudentService {
       query.status = status;
     }
 
-    if (classId) {
-      query.currentClass = classId;
+    if (search) {
+      const matchingUsers = await User.find({
+        schoolId,
+        role: UserRole.STUDENT,
+        $or: [
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+
+      query.$or = [
+        { studentId: { $regex: search, $options: "i" } },
+        { userId: { $in: matchingUsers.map((user) => user._id) } },
+      ];
     }
 
-    if (search) {
-      query.$or = [
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-        { studentId: { $regex: search, $options: "i" } },
-      ];
+    if (classId) {
+      query.classId = classId;
     }
 
     const [students, total] = await Promise.all([
       Student.find(query)
-        .populate("user", "email isActive")
-        .populate("currentClass", "name section")
+        .populate("user", "email status firstName lastName")
+        .populate("class", "name section level")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -260,8 +278,8 @@ class StudentService {
       schoolId,
       status: StudentStatus.ACTIVE,
     })
-      .populate("user", "email isActive")
-      .sort({ lastName: 1, firstName: 1 });
+      .populate("user", "email status firstName lastName")
+      .sort({ studentId: 1 });
 
     return students;
   }
@@ -274,26 +292,67 @@ class StudentService {
     schoolId: string,
     data: UpdateStudentData,
   ): Promise<IStudent> {
+    if (data.classId) {
+      const classDoc = await Class.findOne({ _id: data.classId, schoolId });
+      if (!classDoc) {
+        throw new NotFoundError("Class not found");
+      }
+    }
+
+    if (data.email) {
+      const existingUser = await User.findOne({
+        email: data.email.toLowerCase(),
+        schoolId,
+      });
+      if (existingUser) {
+        const currentStudent = await Student.findOne({ _id: studentId, schoolId });
+        if (!currentStudent || existingUser._id.toString() !== currentStudent.userId.toString()) {
+          throw new ConflictError("User with this email already exists");
+        }
+      }
+    }
+
+    const studentUpdates: Record<string, unknown> = {
+      ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
+      ...(data.gender && { gender: data.gender }),
+      ...(data.address !== undefined && { address: data.address }),
+      ...(data.guardianName !== undefined && { parentName: data.guardianName }),
+      ...(data.guardianEmail !== undefined && { parentEmail: data.guardianEmail }),
+      ...(data.guardianPhone !== undefined && { parentPhone: data.guardianPhone }),
+      ...(data.classId && { classId: data.classId }),
+      ...(data.status && { status: data.status }),
+    };
+
     const student = await Student.findOneAndUpdate(
       { _id: studentId, schoolId: schoolId },
-      { $set: data },
+      { $set: studentUpdates },
       { new: true, runValidators: true },
     )
-      .populate("user", "email isActive")
-      .populate("currentClass", "name section");
+      .populate("user", "email status firstName lastName phone")
+      .populate("class", "name section level");
 
     if (!student) {
       throw new AppError("Student not found", 404);
     }
 
     // Update user record if name changed
-    if (data.firstName || data.lastName) {
-      await User.findByIdAndUpdate(student.userId, {
-        $set: {
-          ...(data.firstName && { firstName: data.firstName }),
-          ...(data.lastName && { lastName: data.lastName }),
+    if (data.firstName || data.lastName || data.email || data.phoneNumber || data.status) {
+      await User.findByIdAndUpdate(
+        student.userId,
+        {
+          $set: {
+            ...(data.firstName && { firstName: data.firstName }),
+            ...(data.lastName && { lastName: data.lastName }),
+            ...(data.email && { email: data.email.toLowerCase() }),
+            ...(data.phoneNumber !== undefined && { phone: data.phoneNumber }),
+            ...(data.status && {
+              status:
+                data.status === StudentStatus.ACTIVE ? "active" : "inactive",
+            }),
+          },
         },
-      });
+        { runValidators: true },
+      );
     }
 
     return student;
@@ -310,8 +369,7 @@ class StudentService {
     // Verify new class exists
     const newClass = await Class.findOne({
       _id: newClassId,
-      school: schoolId,
-      isActive: true,
+      schoolId,
     });
 
     if (!newClass) {
@@ -323,8 +381,8 @@ class StudentService {
       { $set: { classId: newClassId } },
       { new: true },
     )
-      .populate("user", "email isActive")
-      .populate("currentClass", "name section");
+      .populate("user", "email status firstName lastName")
+      .populate("class", "name section level");
 
     if (!student) {
       throw new AppError("Student not found", 404);
@@ -346,8 +404,8 @@ class StudentService {
       { $set: { status } },
       { new: true },
     )
-      .populate("user", "email isActive")
-      .populate("currentClass", "name section");
+      .populate("user", "email status firstName lastName")
+      .populate("class", "name section level");
 
     if (!student) {
       throw new AppError("Student not found", 404);
@@ -358,7 +416,9 @@ class StudentService {
       status === StudentStatus.GRADUATED ||
       status === StudentStatus.TRANSFERRED
     ) {
-      await User.findByIdAndUpdate(student.userId, { isActive: false });
+      await User.findByIdAndUpdate(student.userId, { status: "inactive" });
+    } else if (status === StudentStatus.ACTIVE) {
+      await User.findByIdAndUpdate(student.userId, { status: "active" });
     }
 
     return student;
@@ -385,8 +445,7 @@ class StudentService {
     // Verify class exists
     const classDoc = await Class.findOne({
       _id: classId,
-      school: schoolId,
-      isActive: true,
+      schoolId,
     });
 
     if (!classDoc) {
@@ -437,7 +496,7 @@ class StudentService {
       // Deactivate user account
       await User.findByIdAndUpdate(
         student.userId,
-        { isActive: false },
+        { status: "inactive" },
         { session },
       );
 
@@ -481,7 +540,7 @@ class StudentService {
         },
         {
           $group: {
-            _id: "$currentClass",
+            _id: "$classId",
             count: { $sum: 1 },
           },
         },

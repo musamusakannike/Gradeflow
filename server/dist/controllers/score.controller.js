@@ -37,6 +37,7 @@ exports.scoreController = void 0;
 const mongoose_1 = require("mongoose");
 const resultService = __importStar(require("../services/result.service"));
 const response_util_1 = require("../utils/response.util");
+const types_1 = require("../types");
 const errors_util_1 = require("../utils/errors.util");
 class ScoreController {
     /**
@@ -52,7 +53,7 @@ class ScoreController {
                 classSubjectId: new mongoose_1.Types.ObjectId(classSubjectId),
                 termId: new mongoose_1.Types.ObjectId(termId),
                 ...scoreData,
-            }, schoolId);
+            }, schoolId, req.user.role === types_1.UserRole.TEACHER ? req.user._id : undefined);
             (0, response_util_1.sendSuccess)(res, score, "Score recorded successfully");
         }
         catch (error) {
@@ -71,7 +72,7 @@ class ScoreController {
                 ...s,
                 studentId: new mongoose_1.Types.ObjectId(s.studentId),
             }));
-            const result = await resultService.bulkEnterScores(new mongoose_1.Types.ObjectId(classSubjectId), new mongoose_1.Types.ObjectId(termId), formattedScores, schoolId);
+            const result = await resultService.bulkEnterScores(new mongoose_1.Types.ObjectId(classSubjectId), new mongoose_1.Types.ObjectId(termId), formattedScores, schoolId, req.user.role === types_1.UserRole.TEACHER ? req.user._id : undefined);
             (0, response_util_1.sendSuccess)(res, result, "Bulk score entry completed");
         }
         catch (error) {
@@ -90,7 +91,7 @@ class ScoreController {
             if (!termId) {
                 throw new errors_util_1.BadRequestError("Term ID is required");
             }
-            const result = await resultService.getSubjectResults(new mongoose_1.Types.ObjectId(classSubjectId), new mongoose_1.Types.ObjectId(termId), schoolId);
+            const result = await resultService.getSubjectResults(new mongoose_1.Types.ObjectId(classSubjectId), new mongoose_1.Types.ObjectId(termId), schoolId, req.user.role === types_1.UserRole.TEACHER ? req.user._id : undefined);
             (0, response_util_1.sendSuccess)(res, result, "Subject scores retrieved successfully");
         }
         catch (error) {

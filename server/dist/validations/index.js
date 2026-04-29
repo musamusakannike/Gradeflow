@@ -21,4 +21,6 @@ __exportStar(require("./staff.validation"), exports);
 __exportStar(require("./student.validation"), exports);
 __exportStar(require("./score.validation"), exports);
 __exportStar(require("./finance.validation"), exports);
+__exportStar(require("./school.validation"), exports);
+__exportStar(require("./result.validation"), exports);
 //# sourceMappingURL=index.js.map
