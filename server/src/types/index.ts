@@ -8,6 +8,7 @@ export enum UserRole {
   TEACHER = "teacher",
   BURSAR = "bursar",
   STUDENT = "student",
+  PARENT = "parent",
 }
 
 // User Status
@@ -117,6 +118,7 @@ export interface IUser extends BaseDocument {
 // Student Document
 export interface IStudent extends BaseDocument {
   userId: Types.ObjectId;
+  parentUserId?: Types.ObjectId;
   schoolId: Types.ObjectId;
   studentId: string;
   classId: Types.ObjectId;

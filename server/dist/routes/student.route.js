@@ -10,6 +10,7 @@ const router = (0, express_1.Router)();
 router.use(auth_middleware_1.authenticate);
 // --- Student Statistics ---
 router.get("/stats", student_controller_1.studentController.getStats);
+router.get("/my-children", (0, auth_middleware_1.authorize)(types_1.UserRole.PARENT), student_controller_1.studentController.getMyChildren);
 // --- Student CRUD ---
 router
     .route("/")
@@ -24,5 +25,6 @@ router
 // --- Student Actions ---
 router.post("/:id/transfer", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), student_controller_1.studentController.transferStudent);
 router.patch("/:id/status", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), student_controller_1.studentController.updateStatus);
+router.post("/:id/parent-account", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), (0, validation_middleware_1.validateRequest)(student_validation_1.studentValidation.createParentAccount), student_controller_1.studentController.createParentAccount);
 exports.default = router;
 //# sourceMappingURL=student.route.js.map

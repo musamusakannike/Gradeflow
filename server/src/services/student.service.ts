@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { Student, User, Class, FeeStatus, School } from "../models";
 import { AppError, ConflictError, NotFoundError } from "../utils/errors.util";
 import { generateStudentId, generateSecurePassword } from "../utils/helpers.util";
-import { sendStudentCredentials } from "./email.service";
+import { sendParentCredentials, sendStudentCredentials } from "./email.service";
 import { logger } from "../utils/logger.util";
 import { IStudent, StudentStatus, UserRole } from "../types";
 
@@ -170,6 +170,7 @@ class StudentService {
       schoolId: schoolId,
     })
       .populate("user", "email status lastLogin firstName lastName phone")
+      .populate("parentUser", "email status firstName lastName phone")
       .populate("class", "name section level");
 
     if (!student) {
@@ -191,6 +192,7 @@ class StudentService {
       schoolId: schoolId,
     })
       .populate("user", "email status lastLogin firstName lastName phone")
+      .populate("parentUser", "email status firstName lastName phone")
       .populate("class", "name section level");
 
     if (!student) {
@@ -251,6 +253,7 @@ class StudentService {
     const [students, total] = await Promise.all([
       Student.find(query)
         .populate("user", "email status firstName lastName")
+        .populate("parentUser", "email status firstName lastName phone")
         .populate("class", "name section level")
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -264,6 +267,94 @@ class StudentService {
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async getChildrenForParent(
+    parentUserId: string,
+    schoolId: string,
+  ): Promise<IStudent[]> {
+    return Student.find({
+      parentUserId,
+      schoolId,
+      status: StudentStatus.ACTIVE,
+    })
+      .populate("user", "email status firstName lastName")
+      .populate("class", "name section level")
+      .sort({ createdAt: -1 });
+  }
+
+  async createParentAccount(
+    studentId: string,
+    schoolId: string,
+    data: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+    } = {},
+  ): Promise<{ parent: InstanceType<typeof User>; student: IStudent }> {
+    const student = await Student.findOne({ _id: studentId, schoolId })
+      .populate("user", "firstName lastName")
+      .populate("class", "name section level");
+
+    if (!student) {
+      throw new NotFoundError("Student not found");
+    }
+
+    if (student.parentUserId) {
+      const parent = await User.findById(student.parentUserId);
+      if (parent) {
+        return { parent, student };
+      }
+    }
+
+    const parentEmail = (data.email || student.parentEmail)?.toLowerCase();
+    if (!parentEmail) {
+      throw new AppError("Parent email is required", 400);
+    }
+
+    const existingUser = await User.findOne({ email: parentEmail, schoolId });
+    if (existingUser && existingUser.role !== UserRole.PARENT) {
+      throw new ConflictError("A non-parent user already uses this email");
+    }
+
+    let parent = existingUser;
+
+    const temporaryPassword = generateSecurePassword();
+
+    if (!parent) {
+      const [fallbackFirstName, ...fallbackLastName] = student.parentName.split(" ");
+      parent = await User.create({
+        email: parentEmail,
+        password: temporaryPassword,
+        firstName: data.firstName || fallbackFirstName || "Parent",
+        lastName: data.lastName || fallbackLastName.join(" ") || "Guardian",
+        phone: data.phone || student.parentPhone,
+        role: UserRole.PARENT,
+        schoolId,
+        status: "active",
+        emailVerified: false,
+      });
+
+      const studentUser = student.userId as unknown as {
+        firstName?: string;
+        lastName?: string;
+      };
+
+      await sendParentCredentials(parentEmail, {
+        studentName:
+          `${studentUser?.firstName || ""} ${studentUser?.lastName || ""}`.trim() ||
+          student.studentId,
+        loginEmail: parent.email,
+        password: temporaryPassword,
+        parentName: parent.firstName,
+      });
+    }
+
+    student.parentUserId = parent._id;
+    await student.save();
+
+    return { parent, student };
   }
 
   /**

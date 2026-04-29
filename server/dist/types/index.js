@@ -9,6 +9,7 @@ var UserRole;
     UserRole["TEACHER"] = "teacher";
     UserRole["BURSAR"] = "bursar";
     UserRole["STUDENT"] = "student";
+    UserRole["PARENT"] = "parent";
 })(UserRole || (exports.UserRole = UserRole = {}));
 // Student Status
 var StudentStatus;

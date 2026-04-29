@@ -12,6 +12,12 @@ router.use(authenticate);
 // --- Student Statistics ---
 router.get("/stats", studentController.getStats);
 
+router.get(
+  "/my-children",
+  authorize(UserRole.PARENT),
+  studentController.getMyChildren
+);
+
 // --- Student CRUD ---
 router
   .route("/")
@@ -53,6 +59,13 @@ router.patch(
   "/:id/status",
   authorize(UserRole.SCHOOL_ADMIN),
   studentController.updateStatus
+);
+
+router.post(
+  "/:id/parent-account",
+  authorize(UserRole.SCHOOL_ADMIN),
+  validateRequest(studentValidation.createParentAccount),
+  studentController.createParentAccount
 );
 
 export default router;

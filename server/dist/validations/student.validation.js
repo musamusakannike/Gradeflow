@@ -59,5 +59,13 @@ exports.studentValidation = {
             })).min(1, "At least one student is required"),
         }),
     }),
+    createParentAccount: zod_1.z.object({
+        body: zod_1.z.object({
+            email: zod_1.z.string().email("Invalid parent email").optional(),
+            firstName: zod_1.z.string().min(2).optional(),
+            lastName: zod_1.z.string().min(2).optional(),
+            phone: zod_1.z.string().optional(),
+        }),
+    }),
 };
 //# sourceMappingURL=student.validation.js.map

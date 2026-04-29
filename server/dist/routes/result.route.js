@@ -14,8 +14,10 @@ router.post("/release", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL
 router.post("/unrelease", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), (0, validation_middleware_1.validateRequest)(result_validation_1.resultValidation.classTermBody), result_controller_1.resultController.unreleaseResult);
 router.get("/status", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN, types_1.UserRole.TEACHER), (0, validation_middleware_1.validateRequest)(result_validation_1.resultValidation.status), result_controller_1.resultController.getResultStatus);
 // --- Student Report Card ---
+router.get("/student/:studentId/pdf", result_controller_1.resultController.downloadStudentResultPdf);
 router.get("/student/:studentId", result_controller_1.resultController.getStudentResult);
 // --- Class Broadsheet ---
+router.get("/class/:classId/analytics", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN, types_1.UserRole.TEACHER), result_controller_1.resultController.getClassAnalytics);
 router.get("/class/:classId", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN, types_1.UserRole.TEACHER), result_controller_1.resultController.getClassResults);
 exports.default = router;
 //# sourceMappingURL=result.route.js.map

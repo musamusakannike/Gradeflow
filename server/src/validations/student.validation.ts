@@ -61,4 +61,13 @@ export const studentValidation = {
       ).min(1, "At least one student is required"),
     }),
   }),
+
+  createParentAccount: z.object({
+    body: z.object({
+      email: z.string().email("Invalid parent email").optional(),
+      firstName: z.string().min(2).optional(),
+      lastName: z.string().min(2).optional(),
+      phone: z.string().optional(),
+    }),
+  }),
 };

@@ -114,6 +114,7 @@ class StudentService {
             schoolId: schoolId,
         })
             .populate("user", "email status lastLogin firstName lastName phone")
+            .populate("parentUser", "email status firstName lastName phone")
             .populate("class", "name section level");
         if (!student) {
             throw new errors_util_1.AppError("Student not found", 404);
@@ -129,6 +130,7 @@ class StudentService {
             schoolId: schoolId,
         })
             .populate("user", "email status lastLogin firstName lastName phone")
+            .populate("parentUser", "email status firstName lastName phone")
             .populate("class", "name section level");
         if (!student) {
             throw new errors_util_1.AppError("Student not found", 404);
@@ -166,6 +168,7 @@ class StudentService {
         const [students, total] = await Promise.all([
             models_1.Student.find(query)
                 .populate("user", "email status firstName lastName")
+                .populate("parentUser", "email status firstName lastName phone")
                 .populate("class", "name section level")
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -178,6 +181,65 @@ class StudentService {
             page,
             totalPages: Math.ceil(total / limit),
         };
+    }
+    async getChildrenForParent(parentUserId, schoolId) {
+        return models_1.Student.find({
+            parentUserId,
+            schoolId,
+            status: types_1.StudentStatus.ACTIVE,
+        })
+            .populate("user", "email status firstName lastName")
+            .populate("class", "name section level")
+            .sort({ createdAt: -1 });
+    }
+    async createParentAccount(studentId, schoolId, data = {}) {
+        const student = await models_1.Student.findOne({ _id: studentId, schoolId })
+            .populate("user", "firstName lastName")
+            .populate("class", "name section level");
+        if (!student) {
+            throw new errors_util_1.NotFoundError("Student not found");
+        }
+        if (student.parentUserId) {
+            const parent = await models_1.User.findById(student.parentUserId);
+            if (parent) {
+                return { parent, student };
+            }
+        }
+        const parentEmail = (data.email || student.parentEmail)?.toLowerCase();
+        if (!parentEmail) {
+            throw new errors_util_1.AppError("Parent email is required", 400);
+        }
+        const existingUser = await models_1.User.findOne({ email: parentEmail, schoolId });
+        if (existingUser && existingUser.role !== types_1.UserRole.PARENT) {
+            throw new errors_util_1.ConflictError("A non-parent user already uses this email");
+        }
+        let parent = existingUser;
+        const temporaryPassword = (0, helpers_util_1.generateSecurePassword)();
+        if (!parent) {
+            const [fallbackFirstName, ...fallbackLastName] = student.parentName.split(" ");
+            parent = await models_1.User.create({
+                email: parentEmail,
+                password: temporaryPassword,
+                firstName: data.firstName || fallbackFirstName || "Parent",
+                lastName: data.lastName || fallbackLastName.join(" ") || "Guardian",
+                phone: data.phone || student.parentPhone,
+                role: types_1.UserRole.PARENT,
+                schoolId,
+                status: "active",
+                emailVerified: false,
+            });
+            const studentUser = student.userId;
+            await (0, email_service_1.sendParentCredentials)(parentEmail, {
+                studentName: `${studentUser?.firstName || ""} ${studentUser?.lastName || ""}`.trim() ||
+                    student.studentId,
+                loginEmail: parent.email,
+                password: temporaryPassword,
+                parentName: parent.firstName,
+            });
+        }
+        student.parentUserId = parent._id;
+        await student.save();
+        return { parent, student };
     }
     /**
      * Get students by class

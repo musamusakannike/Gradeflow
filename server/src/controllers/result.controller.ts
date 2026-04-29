@@ -4,6 +4,8 @@ import * as resultService from "../services/result.service";
 import { Student } from "../models/student.model";
 import { Class } from "../models/class.model";
 import { ClassSubject } from "../models/class-subject.model";
+import { School } from "../models/school.model";
+import { generateReportCardPdf } from "../services/result-pdf.service";
 import { sendSuccess } from "../utils/response.util";
 import { AuthenticatedRequest, UserRole } from "../types";
 import { BadRequestError, ForbiddenError } from "../utils/errors.util";
@@ -129,14 +131,84 @@ class ResultController {
         }
       }
 
+      if (req.user!.role === UserRole.PARENT) {
+        const student = await Student.findOne({
+          _id: studentId,
+          schoolId,
+          parentUserId: req.user!._id,
+        }).select("_id");
+
+        if (!student) {
+          throw new ForbiddenError("Cannot access another student's result");
+        }
+      }
+
       const result = await resultService.getStudentResult(
         new Types.ObjectId(studentId),
         new Types.ObjectId(termId as string),
         schoolId,
-        checkFees
+        req.user!.role === UserRole.STUDENT || req.user!.role === UserRole.PARENT,
       );
 
       sendSuccess(res, result, "Result retrieved successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async downloadStudentResultPdf(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const schoolId = req.user!.schoolId as unknown as Types.ObjectId;
+      const studentId = req.params.studentId as string;
+      const { termId } = req.query;
+
+      if (!termId) {
+        throw new BadRequestError("Term ID is required");
+      }
+
+      if (req.user!.role === UserRole.STUDENT) {
+        const student = await Student.findOne({
+          _id: studentId,
+          schoolId,
+          userId: req.user!._id,
+        }).select("_id");
+
+        if (!student) {
+          throw new ForbiddenError("Cannot access another student's result");
+        }
+      }
+
+      if (req.user!.role === UserRole.PARENT) {
+        const student = await Student.findOne({
+          _id: studentId,
+          schoolId,
+          parentUserId: req.user!._id,
+        }).select("_id");
+
+        if (!student) {
+          throw new ForbiddenError("Cannot access another student's result");
+        }
+      }
+
+      const result = await resultService.getStudentResult(
+        new Types.ObjectId(studentId),
+        new Types.ObjectId(termId as string),
+        schoolId,
+        req.user!.role === UserRole.STUDENT || req.user!.role === UserRole.PARENT,
+      );
+      const school = await School.findById(schoolId).select("name");
+      const pdf = await generateReportCardPdf(result, school?.name || "GradeFlow");
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${result.student.studentId.replace(/\W+/g, "-")}-${result.term.name.replace(/\W+/g, "-")}.pdf"`,
+      );
+      res.send(pdf);
     } catch (error) {
       next(error);
     }
@@ -186,6 +258,44 @@ class ResultController {
       );
 
       sendSuccess(res, results, "Class results retrieved successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getClassAnalytics(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const schoolId = req.user!.schoolId as unknown as Types.ObjectId;
+      const classId = req.params.classId as string;
+      const { termId } = req.query;
+
+      if (!termId) {
+        throw new BadRequestError("Term ID is required");
+      }
+
+      if (req.user!.role === UserRole.TEACHER) {
+        const assignedSubject = await ClassSubject.findOne({
+          classId,
+          schoolId,
+          teacherId: req.user!._id,
+        }).select("_id");
+
+        if (!assignedSubject) {
+          throw new ForbiddenError("Cannot view analytics for this class");
+        }
+      }
+
+      const analytics = await resultService.getClassAnalytics(
+        new Types.ObjectId(classId),
+        new Types.ObjectId(termId as string),
+        schoolId,
+      );
+
+      sendSuccess(res, analytics, "Class analytics retrieved successfully");
     } catch (error) {
       next(error);
     }

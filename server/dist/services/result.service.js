@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateGPA = exports.bulkEnterScores = exports.enterScores = exports.getSubjectResults = exports.getClassResults = exports.getStudentResult = exports.checkFeeStatus = exports.getResultBatchStatus = exports.unreleaseResultBatch = exports.releaseResultBatch = exports.compileResultBatch = void 0;
+exports.calculateGPA = exports.bulkEnterScores = exports.enterScores = exports.getSubjectResults = exports.getClassAnalytics = exports.getClassResults = exports.getStudentResult = exports.checkFeeStatus = exports.getResultBatchStatus = exports.unreleaseResultBatch = exports.releaseResultBatch = exports.compileResultBatch = void 0;
 const score_model_1 = require("../models/score.model");
 const student_model_1 = require("../models/student.model");
 const fee_status_model_1 = require("../models/fee-status.model");
@@ -9,9 +9,12 @@ const term_model_1 = require("../models/term.model");
 const class_model_1 = require("../models/class.model");
 const user_model_1 = require("../models/user.model");
 const result_batch_model_1 = require("../models/result-batch.model");
+const school_model_1 = require("../models/school.model");
 const errors_util_1 = require("../utils/errors.util");
 const logger_util_1 = require("../utils/logger.util");
 const helpers_util_1 = require("../utils/helpers.util");
+const email_service_1 = require("./email.service");
+const notification_service_1 = require("./notification.service");
 const getReleasedBatch = async (classId, termId, schoolId) => {
     return result_batch_model_1.ResultBatch.findOne({
         classId,
@@ -100,6 +103,7 @@ const releaseResultBatch = async (classId, termId, schoolId, releasedBy) => {
     batch.releasedBy = releasedBy;
     batch.releasedAt = new Date();
     await batch.save();
+    await notifyResultRelease(classId, termId, schoolId);
     return batch;
 };
 exports.releaseResultBatch = releaseResultBatch;
@@ -275,6 +279,95 @@ const getClassResults = async (classId, termId, schoolId) => {
     return { results, classStats };
 };
 exports.getClassResults = getClassResults;
+const getClassAnalytics = async (classId, termId, schoolId) => {
+    const classSubjectIds = await class_subject_model_1.ClassSubject.find({ classId, schoolId })
+        .distinct("_id");
+    const scores = await score_model_1.Score.find({
+        schoolId,
+        termId,
+        classSubjectId: { $in: classSubjectIds },
+    }).populate({
+        path: "classSubjectId",
+        populate: { path: "subjectId", select: "name code" },
+    });
+    const totals = scores.map((score) => score.total);
+    const passed = scores.filter((score) => score.total >= 50).length;
+    const failed = scores.length - passed;
+    const bySubjectMap = new Map();
+    for (const score of scores) {
+        const classSubject = score.classSubjectId;
+        const key = classSubject.subjectId.code;
+        const current = bySubjectMap.get(key) ||
+            {
+                subject: classSubject.subjectId.name,
+                code: classSubject.subjectId.code,
+                scores: [],
+                passed: 0,
+            };
+        current.scores.push(score.total);
+        if (score.total >= 50)
+            current.passed += 1;
+        bySubjectMap.set(key, current);
+    }
+    const bySubject = Array.from(bySubjectMap.values()).map((item) => ({
+        subject: item.subject,
+        code: item.code,
+        totalScores: item.scores.length,
+        averageScore: item.scores.length > 0
+            ? Math.round((item.scores.reduce((sum, score) => sum + score, 0) /
+                item.scores.length) *
+                100) / 100
+            : 0,
+        highestScore: item.scores.length > 0 ? Math.max(...item.scores) : 0,
+        lowestScore: item.scores.length > 0 ? Math.min(...item.scores) : 0,
+        passRate: item.scores.length > 0
+            ? Math.round((item.passed / item.scores.length) * 10000) / 100
+            : 0,
+    }));
+    return {
+        totals: {
+            totalScores: scores.length,
+            averageScore: totals.length > 0
+                ? Math.round((totals.reduce((sum, score) => sum + score, 0) / totals.length) *
+                    100) / 100
+                : 0,
+            highestScore: totals.length > 0 ? Math.max(...totals) : 0,
+            lowestScore: totals.length > 0 ? Math.min(...totals) : 0,
+            passCount: passed,
+            failCount: failed,
+            passRate: scores.length > 0 ? Math.round((passed / scores.length) * 10000) / 100 : 0,
+        },
+        bySubject,
+    };
+};
+exports.getClassAnalytics = getClassAnalytics;
+const notifyResultRelease = async (classId, termId, schoolId) => {
+    try {
+        const [school, term, students] = await Promise.all([
+            school_model_1.School.findById(schoolId).select("name"),
+            term_model_1.Term.findById(termId).select("name"),
+            student_model_1.Student.find({ classId, schoolId, status: "active" })
+                .populate("userId", "email firstName")
+                .populate("parentUserId", "email firstName"),
+        ]);
+        await Promise.all(students.map(async (student) => {
+            const user = student.userId;
+            const parent = student.parentUserId;
+            await Promise.all([
+                (0, notification_service_1.sendResultNotification)(student._id, term?.name || "Term"),
+                user?.email
+                    ? (0, email_service_1.sendResultNotificationEmail)(user.email, user.firstName || "Student", term?.name || "Term", school?.name || "School")
+                    : Promise.resolve(false),
+                parent?.email
+                    ? (0, email_service_1.sendResultNotificationEmail)(parent.email, parent.firstName || "Parent", term?.name || "Term", school?.name || "School")
+                    : Promise.resolve(false),
+            ]);
+        }));
+    }
+    catch (error) {
+        logger_util_1.logger.error("Failed to send result release notifications:", error);
+    }
+};
 /**
  * Get subject results for a class
  */

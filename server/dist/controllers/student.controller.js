@@ -155,6 +155,27 @@ class StudentController {
             next(error);
         }
     }
+    async getMyChildren(req, res, next) {
+        try {
+            const schoolId = req.user.schoolId.toString();
+            const children = await student_service_1.studentService.getChildrenForParent(req.user._id.toString(), schoolId);
+            (0, response_util_1.sendSuccess)(res, children, "Children retrieved successfully");
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    async createParentAccount(req, res, next) {
+        try {
+            const id = req.params.id;
+            const schoolId = req.user.schoolId.toString();
+            const result = await student_service_1.studentService.createParentAccount(id, schoolId, req.body);
+            (0, response_util_1.sendSuccess)(res, result, "Parent account linked successfully", 201);
+        }
+        catch (error) {
+            next(error);
+        }
+    }
 }
 exports.studentController = new StudentController();
 //# sourceMappingURL=student.controller.js.map

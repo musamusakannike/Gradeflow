@@ -373,3 +373,54 @@ export const sendStudentCredentials = async (
   });
 };
 
+export const sendParentCredentials = async (
+  email: string,
+  data: {
+    parentName: string;
+    studentName: string;
+    loginEmail: string;
+    password: string;
+  },
+): Promise<boolean> => {
+  const appName = resendConfig.appName;
+  const appUrl = resendConfig.appUrl;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Parent Portal Credentials</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">${appName}</h1>
+      </div>
+
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #333;">Parent Portal Access</h2>
+        <p>Dear ${data.parentName},</p>
+        <p>A parent account has been created for you to monitor <strong>${data.studentName}</strong>.</p>
+
+        <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border: 1px solid #eee;">
+          <p style="margin: 5px 0;"><strong>Login Email:</strong> ${data.loginEmail}</p>
+          <p style="margin: 5px 0;"><strong>Temporary Password:</strong> ${data.password}</p>
+        </div>
+
+        <p>Please change your password after logging in.</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${appUrl}/login" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Portal</a>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Parent Portal Access - ${appName}`,
+    html,
+  });
+};

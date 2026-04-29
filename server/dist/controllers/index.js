@@ -24,4 +24,5 @@ __exportStar(require("./score.controller"), exports);
 __exportStar(require("./result.controller"), exports);
 __exportStar(require("./finance.controller"), exports);
 __exportStar(require("./school.controller"), exports);
+__exportStar(require("./dashboard.controller"), exports);
 //# sourceMappingURL=index.js.map

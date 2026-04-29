@@ -7,10 +7,13 @@ import { Term } from "../models/term.model";
 import { Class } from "../models/class.model";
 import { User } from "../models/user.model";
 import { ResultBatch } from "../models/result-batch.model";
+import { School } from "../models/school.model";
 import { ResultSummary } from "../types";
 import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/errors.util";
 import { logger } from "../utils/logger.util";
 import { getGradePoint } from "../utils/helpers.util";
+import { sendResultNotificationEmail } from "./email.service";
+import { sendResultNotification } from "./notification.service";
 
 const getReleasedBatch = async (
   classId: Types.ObjectId,
@@ -148,6 +151,8 @@ export const releaseResultBatch = async (
   batch.releasedBy = releasedBy;
   batch.releasedAt = new Date();
   await batch.save();
+
+  await notifyResultRelease(classId, termId, schoolId);
 
   return batch;
 };
@@ -395,6 +400,143 @@ export const getClassResults = async (
   };
 
   return { results, classStats };
+};
+
+export const getClassAnalytics = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+) => {
+  const classSubjectIds = await ClassSubject.find({ classId, schoolId })
+    .distinct("_id");
+
+  const scores = await Score.find({
+    schoolId,
+    termId,
+    classSubjectId: { $in: classSubjectIds },
+  }).populate({
+    path: "classSubjectId",
+    populate: { path: "subjectId", select: "name code" },
+  });
+
+  const totals = scores.map((score) => score.total);
+  const passed = scores.filter((score) => score.total >= 50).length;
+  const failed = scores.length - passed;
+
+  const bySubjectMap = new Map<
+    string,
+    { subject: string; code: string; scores: number[]; passed: number }
+  >();
+
+  for (const score of scores) {
+    const classSubject = score.classSubjectId as unknown as {
+      subjectId: { name: string; code: string };
+    };
+    const key = classSubject.subjectId.code;
+    const current =
+      bySubjectMap.get(key) ||
+      {
+        subject: classSubject.subjectId.name,
+        code: classSubject.subjectId.code,
+        scores: [],
+        passed: 0,
+      };
+
+    current.scores.push(score.total);
+    if (score.total >= 50) current.passed += 1;
+    bySubjectMap.set(key, current);
+  }
+
+  const bySubject = Array.from(bySubjectMap.values()).map((item) => ({
+    subject: item.subject,
+    code: item.code,
+    totalScores: item.scores.length,
+    averageScore:
+      item.scores.length > 0
+        ? Math.round(
+            (item.scores.reduce((sum, score) => sum + score, 0) /
+              item.scores.length) *
+              100,
+          ) / 100
+        : 0,
+    highestScore: item.scores.length > 0 ? Math.max(...item.scores) : 0,
+    lowestScore: item.scores.length > 0 ? Math.min(...item.scores) : 0,
+    passRate:
+      item.scores.length > 0
+        ? Math.round((item.passed / item.scores.length) * 10000) / 100
+        : 0,
+  }));
+
+  return {
+    totals: {
+      totalScores: scores.length,
+      averageScore:
+        totals.length > 0
+          ? Math.round(
+              (totals.reduce((sum, score) => sum + score, 0) / totals.length) *
+                100,
+            ) / 100
+          : 0,
+      highestScore: totals.length > 0 ? Math.max(...totals) : 0,
+      lowestScore: totals.length > 0 ? Math.min(...totals) : 0,
+      passCount: passed,
+      failCount: failed,
+      passRate:
+        scores.length > 0 ? Math.round((passed / scores.length) * 10000) / 100 : 0,
+    },
+    bySubject,
+  };
+};
+
+const notifyResultRelease = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+): Promise<void> => {
+  try {
+    const [school, term, students] = await Promise.all([
+      School.findById(schoolId).select("name"),
+      Term.findById(termId).select("name"),
+      Student.find({ classId, schoolId, status: "active" })
+        .populate("userId", "email firstName")
+        .populate("parentUserId", "email firstName"),
+    ]);
+
+    await Promise.all(
+      students.map(async (student) => {
+        const user = student.userId as unknown as {
+          email?: string;
+          firstName?: string;
+        };
+        const parent = student.parentUserId as unknown as {
+          email?: string;
+          firstName?: string;
+        } | null;
+
+        await Promise.all([
+          sendResultNotification(student._id as Types.ObjectId, term?.name || "Term"),
+          user?.email
+            ? sendResultNotificationEmail(
+                user.email,
+                user.firstName || "Student",
+                term?.name || "Term",
+                school?.name || "School",
+              )
+            : Promise.resolve(false),
+          parent?.email
+            ? sendResultNotificationEmail(
+                parent.email,
+                parent.firstName || "Parent",
+                term?.name || "Term",
+                school?.name || "School",
+              )
+            : Promise.resolve(false),
+        ]);
+      }),
+    );
+  } catch (error) {
+    logger.error("Failed to send result release notifications:", error);
+  }
 };
 
 /**

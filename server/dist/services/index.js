@@ -22,4 +22,6 @@ __exportStar(require("./result.service"), exports);
 __exportStar(require("./firebase.service"), exports);
 __exportStar(require("./notification.service"), exports);
 __exportStar(require("./student.service"), exports);
+__exportStar(require("./result-pdf.service"), exports);
+__exportStar(require("./dashboard.service"), exports);
 //# sourceMappingURL=index.js.map

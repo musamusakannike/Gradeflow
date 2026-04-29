@@ -40,11 +40,22 @@ router.get(
 
 // --- Student Report Card ---
 router.get(
+  "/student/:studentId/pdf",
+  resultController.downloadStudentResultPdf
+);
+
+router.get(
   "/student/:studentId",
   resultController.getStudentResult
 );
 
 // --- Class Broadsheet ---
+router.get(
+  "/class/:classId/analytics",
+  authorize(UserRole.SCHOOL_ADMIN, UserRole.TEACHER),
+  resultController.getClassAnalytics
+);
+
 router.get(
   "/class/:classId",
   authorize(UserRole.SCHOOL_ADMIN, UserRole.TEACHER),

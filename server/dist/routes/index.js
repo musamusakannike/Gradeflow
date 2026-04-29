@@ -14,6 +14,7 @@ const score_route_1 = __importDefault(require("./score.route"));
 const result_route_1 = __importDefault(require("./result.route"));
 const finance_route_1 = __importDefault(require("./finance.route"));
 const school_route_1 = __importDefault(require("./school.route"));
+const dashboard_route_1 = __importDefault(require("./dashboard.route"));
 const router = (0, express_1.Router)();
 /**
  * API v1 routes
@@ -28,6 +29,7 @@ router.use("/scores", score_route_1.default);
 router.use("/results", result_route_1.default);
 router.use("/finance", finance_route_1.default);
 router.use("/school", school_route_1.default);
+router.use("/dashboard", dashboard_route_1.default);
 // router.use("/schools", schoolRoutes);
 // router.use("/users", userRoutes);
 // router.use("/students", studentRoutes);

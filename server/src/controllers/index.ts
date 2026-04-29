@@ -8,3 +8,4 @@ export * from "./score.controller";
 export * from "./result.controller";
 export * from "./finance.controller";
 export * from "./school.controller";
+export * from "./dashboard.controller";
