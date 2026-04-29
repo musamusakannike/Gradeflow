@@ -77,7 +77,6 @@ studentSchema.index({ schoolId: 1, studentId: 1 }, { unique: true });
 // Other indexes
 studentSchema.index({ schoolId: 1, classId: 1 });
 studentSchema.index({ schoolId: 1, status: 1 });
-studentSchema.index({ userId: 1 });
 
 // Virtual to populate user details
 studentSchema.virtual('user', {

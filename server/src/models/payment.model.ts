@@ -64,8 +64,6 @@ const paymentSchema = new Schema<PaymentDocument>(
 // Indexes
 paymentSchema.index({ schoolId: 1, studentId: 1 });
 paymentSchema.index({ schoolId: 1, termId: 1 });
-paymentSchema.index({ reference: 1 });
-paymentSchema.index({ paystackReference: 1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ createdAt: -1 });
 
