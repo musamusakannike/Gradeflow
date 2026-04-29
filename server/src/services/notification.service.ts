@@ -4,10 +4,10 @@ import {
   sendPushNotifications,
   isValidExpoPushToken,
   PushNotificationResult,
-} from "../config/expo.config.js";
-import { User } from "../models/user.model.js";
-import { Student } from "../models/student.model.js";
-import { logger } from "../utils/logger.util.js";
+} from "../config/expo.config";
+import { User } from "../models/user.model";
+import { Student } from "../models/student.model";
+import { logger } from "../utils/logger.util";
 
 interface NotificationData {
   type: string;
