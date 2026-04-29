@@ -3,6 +3,7 @@ import authRoutes from "./auth.route";
 import academicRoutes from "./academic.route";
 import classRoutes from "./class.route";
 import subjectRoutes from "./subject.route";
+import staffRoutes from "./staff.route";
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.use("/auth", authRoutes);
 router.use("/academic", academicRoutes);
 router.use("/classes", classRoutes);
 router.use("/subjects", subjectRoutes);
+router.use("/staff", staffRoutes);
 
 // router.use("/schools", schoolRoutes);
 // router.use("/users", userRoutes);

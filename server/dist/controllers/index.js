@@ -18,4 +18,5 @@ __exportStar(require("./auth.controller"), exports);
 __exportStar(require("./academic.controller"), exports);
 __exportStar(require("./class.controller"), exports);
 __exportStar(require("./subject.controller"), exports);
+__exportStar(require("./staff.controller"), exports);
 //# sourceMappingURL=index.js.map

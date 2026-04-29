@@ -17,4 +17,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./auth.validation"), exports);
 __exportStar(require("./academic.validation"), exports);
 __exportStar(require("./academic-structure.validation"), exports);
+__exportStar(require("./staff.validation"), exports);
+__exportStar(require("./student.validation"), exports);
 //# sourceMappingURL=index.js.map
