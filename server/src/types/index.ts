@@ -1,29 +1,41 @@
-import { Request } from 'express';
-import { Types } from 'mongoose';
+import { Request } from "express";
+import { Types } from "mongoose";
 
 // User Roles
-export type UserRole = 'super_admin' | 'school_admin' | 'teacher' | 'bursar' | 'student';
+export enum UserRole {
+  SUPER_ADMIN = "super_admin",
+  SCHOOL_ADMIN = "school_admin",
+  TEACHER = "teacher",
+  BURSAR = "bursar",
+  STUDENT = "student",
+}
 
 // User Status
-export type UserStatus = 'active' | 'inactive' | 'suspended';
+export type UserStatus = "active" | "inactive" | "suspended";
 
 // Student Status
-export type StudentStatus = 'active' | 'graduated' | 'transferred' | 'expelled' | 'withdrawn';
+export enum StudentStatus {
+  ACTIVE = "active",
+  GRADUATED = "graduated",
+  TRANSFERRED = "transferred",
+  EXPELLED = "expelled",
+  WITHDRAWN = "withdrawn",
+}
 
 // Term Number
 export type TermNumber = 1 | 2 | 3;
 
 // Fee Status
-export type FeeStatusType = 'paid' | 'unpaid' | 'partial';
+export type FeeStatusType = "paid" | "unpaid" | "partial";
 
 // Payment Status
-export type PaymentStatus = 'pending' | 'success' | 'failed' | 'abandoned';
+export type PaymentStatus = "pending" | "success" | "failed" | "abandoned";
 
 // Score Types
-export type AssessmentType = 'test1' | 'test2' | 'exam';
+export type AssessmentType = "test1" | "test2" | "exam";
 
 // Gender
-export type Gender = 'male' | 'female';
+export type Gender = "male" | "female";
 
 // Authenticated User in Request
 export interface AuthUser {
@@ -44,7 +56,7 @@ export interface PaginationQuery {
   page?: string;
   limit?: string;
   sort?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
 }
 
 // Base Document Interface
@@ -69,14 +81,14 @@ export interface ISchool extends BaseDocument {
   isActive: boolean;
   settings: {
     maxStudentsPerClass: number;
-    gradingScale: 'default' | 'custom';
+    gradingScale: "default" | "custom";
     customGrades?: Array<{
       min: number;
       max: number;
       grade: string;
       remark: string;
     }>;
-    resultReleaseMode: 'automatic' | 'manual';
+    resultReleaseMode: "automatic" | "manual";
   };
 }
 
@@ -210,7 +222,7 @@ export interface JWTPayload {
   email: string;
   role: UserRole;
   schoolId?: string;
-  type: 'access' | 'refresh';
+  type: "access" | "refresh";
 }
 
 // Login Response

@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 /**
  * Generate a unique ID with optional prefix
@@ -41,6 +42,28 @@ export const generatePassword = (length: number = 12): string => {
     password += charset.charAt(Math.floor(Math.random() * charset.length));
   }
   return password;
+};
+
+/**
+ * Generate a secure random password
+ */
+export const generateSecurePassword = (length: number = 10): string => {
+  const charset =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+  const bytes = crypto.randomBytes(length);
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += charset[bytes[i] % charset.length];
+  }
+  return password;
+};
+
+/**
+ * Hash a password
+ */
+export const hashPassword = async (password: string): Promise<string> => {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
 };
 
 /**
