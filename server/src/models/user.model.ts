@@ -41,14 +41,8 @@ const userSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: [
-        "super_admin",
-        "school_admin",
-        "teacher",
-        "bursar",
-        "student",
-      ] as UserRole[],
-      default: "student",
+      enum: Object.values(UserRole),
+      default: UserRole.STUDENT,
     },
     schoolId: {
       type: Schema.Types.ObjectId,

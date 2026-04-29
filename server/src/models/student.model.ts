@@ -60,8 +60,8 @@ const studentSchema = new Schema<StudentDocument>(
     },
     status: {
       type: String,
-      enum: ['active', 'graduated', 'transferred', 'expelled', 'withdrawn'] as StudentStatus[],
-      default: 'active',
+      enum: Object.values(StudentStatus),
+      default: StudentStatus.ACTIVE,
     },
   },
   {
