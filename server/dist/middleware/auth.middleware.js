@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireSchoolAccess = exports.requireStaff = exports.requireBursar = exports.requireTeacher = exports.requireSchoolAdmin = exports.requireSuperAdmin = exports.requireRoles = exports.optionalAuth = exports.authenticate = void 0;
+exports.requireSchoolAccess = exports.requireStaff = exports.requireBursar = exports.requireTeacher = exports.requireSchoolAdmin = exports.requireSuperAdmin = exports.authorize = exports.requireRoles = exports.optionalAuth = exports.authenticate = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const index_1 = require("../types/index");
 const errors_util_1 = require("../utils/errors.util");
@@ -120,6 +120,10 @@ const requireRoles = (...allowedRoles) => {
     };
 };
 exports.requireRoles = requireRoles;
+/**
+ * Alias for requireRoles
+ */
+exports.authorize = exports.requireRoles;
 /**
  * Require super admin role
  */
