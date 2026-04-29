@@ -89,7 +89,7 @@ class StudentController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const schoolId = req.user!.schoolId!.toString();
 
       const student = await studentService.getStudentById(id, schoolId);
@@ -109,7 +109,7 @@ class StudentController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const schoolId = req.user!.schoolId!.toString();
 
       const student = await studentService.updateStudent(id, schoolId, req.body);
@@ -129,7 +129,7 @@ class StudentController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const { classId } = req.body;
       const schoolId = req.user!.schoolId!.toString();
 
@@ -154,7 +154,7 @@ class StudentController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const { status } = req.body;
       const schoolId = req.user!.schoolId!.toString();
 
@@ -179,7 +179,7 @@ class StudentController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const schoolId = req.user!.schoolId!.toString();
 
       await studentService.deleteStudent(id, schoolId);

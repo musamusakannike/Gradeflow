@@ -5,6 +5,8 @@ import classRoutes from "./class.route";
 import subjectRoutes from "./subject.route";
 import staffRoutes from "./staff.route";
 import studentRoutes from "./student.route";
+import scoreRoutes from "./score.route";
+import resultRoutes from "./result.route";
 
 const router = Router();
 
@@ -17,6 +19,8 @@ router.use("/classes", classRoutes);
 router.use("/subjects", subjectRoutes);
 router.use("/staff", staffRoutes);
 router.use("/students", studentRoutes);
+router.use("/scores", scoreRoutes);
+router.use("/results", resultRoutes);
 
 // router.use("/schools", schoolRoutes);
 // router.use("/users", userRoutes);
