@@ -13,8 +13,9 @@ export const connectDatabase = async (): Promise<void> => {
 
     const conn = await mongoose.connect(mongoUri, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
+      family: 4, // Force IPv4 to avoid potential IPv6 resolution issues
     });
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
