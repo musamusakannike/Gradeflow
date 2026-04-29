@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { ISchool } from "../types/index.js";
+import { ISchool } from "../types/index";
 
 export interface SchoolDocument extends Omit<ISchool, "_id">, Document {}
 

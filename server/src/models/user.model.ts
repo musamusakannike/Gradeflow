@@ -1,8 +1,8 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import bcrypt from 'bcryptjs';
-import { IUser, UserRole, UserStatus } from '../types/index.js';
+import mongoose, { Schema, Document, Model } from "mongoose";
+import bcrypt from "bcryptjs";
+import { IUser, UserRole, UserStatus } from "../types/index";
 
-export interface UserDocument extends Omit<IUser, '_id'>, Document {
+export interface UserDocument extends Omit<IUser, "_id">, Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
   fullName: string;
 }
@@ -11,29 +11,29 @@ const userSchema = new Schema<UserDocument>(
   {
     email: {
       type: String,
-      required: [true, 'Email is required'],
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
+      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email"],
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
-      minlength: [8, 'Password must be at least 8 characters'],
+      required: [true, "Password is required"],
+      minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
     firstName: {
       type: String,
-      required: [true, 'First name is required'],
+      required: [true, "First name is required"],
       trim: true,
-      maxlength: [50, 'First name cannot exceed 50 characters'],
+      maxlength: [50, "First name cannot exceed 50 characters"],
     },
     lastName: {
       type: String,
-      required: [true, 'Last name is required'],
+      required: [true, "Last name is required"],
       trim: true,
-      maxlength: [50, 'Last name cannot exceed 50 characters'],
+      maxlength: [50, "Last name cannot exceed 50 characters"],
     },
     phone: {
       type: String,
@@ -41,20 +41,26 @@ const userSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: ['super_admin', 'school_admin', 'teacher', 'bursar', 'student'] as UserRole[],
-      default: 'student',
+      enum: [
+        "super_admin",
+        "school_admin",
+        "teacher",
+        "bursar",
+        "student",
+      ] as UserRole[],
+      default: "student",
     },
     schoolId: {
       type: Schema.Types.ObjectId,
-      ref: 'School',
+      ref: "School",
       required: function (this: UserDocument) {
-        return this.role !== 'super_admin';
+        return this.role !== "super_admin";
       },
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'suspended'] as UserStatus[],
-      default: 'active',
+      enum: ["active", "inactive", "suspended"] as UserStatus[],
+      default: "active",
     },
     avatar: {
       type: String,
@@ -92,11 +98,11 @@ const userSchema = new Schema<UserDocument>(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // Virtual for full name
-userSchema.virtual('fullName').get(function (this: UserDocument) {
+userSchema.virtual("fullName").get(function (this: UserDocument) {
   return `${this.firstName} ${this.lastName}`;
 });
 
@@ -107,8 +113,8 @@ userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 
 // Hash password before saving
-userSchema.pre('save', async function (this: UserDocument) {
-  if (!this.isModified('password')) {
+userSchema.pre("save", async function (this: UserDocument) {
+  if (!this.isModified("password")) {
     return;
   }
 
@@ -122,7 +128,7 @@ userSchema.pre('save', async function (this: UserDocument) {
 
 // Compare password method
 userSchema.methods.comparePassword = async function (
-  candidatePassword: string
+  candidatePassword: string,
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
@@ -136,4 +142,7 @@ userSchema.methods.toJSON = function () {
   return obj;
 };
 
-export const User: Model<UserDocument> = mongoose.model<UserDocument>('User', userSchema);
+export const User: Model<UserDocument> = mongoose.model<UserDocument>(
+  "User",
+  userSchema,
+);
