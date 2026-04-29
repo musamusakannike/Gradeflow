@@ -166,6 +166,11 @@ export const requireRoles = (...allowedRoles: UserRole[]) => {
 };
 
 /**
+ * Alias for requireRoles
+ */
+export const authorize = requireRoles;
+
+/**
  * Require super admin role
  */
 export const requireSuperAdmin = requireRoles(UserRole.SUPER_ADMIN);

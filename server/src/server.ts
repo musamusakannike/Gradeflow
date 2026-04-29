@@ -1,12 +1,19 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import routes from "./routes";
 import { errorHandler } from "./middleware/error.middleware";
+import { connectDatabase } from "./config/db.config";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
+
+// Connect to Database
+connectDatabase();
 
 // Middleware
 app.use(helmet());

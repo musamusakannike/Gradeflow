@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authRoutes from "./auth.route";
+import academicRoutes from "./academic.route";
 
 const router = Router();
 
@@ -7,6 +8,7 @@ const router = Router();
  * API v1 routes
  */
 router.use("/auth", authRoutes);
+router.use("/academic", academicRoutes);
 
 // router.use("/schools", schoolRoutes);
 // router.use("/users", userRoutes);
