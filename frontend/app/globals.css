@@ -63,6 +63,7 @@ textarea {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 
 ::selection {
