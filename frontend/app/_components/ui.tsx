@@ -2,7 +2,9 @@
 
 import clsx from "clsx";
 import { motion } from "motion/react";
+import React, { useState } from "react";
 import type { IconType } from "react-icons";
+import { FiAlertCircle, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { tap } from "@/lib/haptics";
 
 export function Button({
@@ -100,5 +102,96 @@ export function Pill({ children }: { children: React.ReactNode }) {
     <span className="inline-flex items-center rounded-full border border-[rgba(49,92,67,.18)] bg-[rgba(255,253,247,.62)] px-3 py-1 text-xs font-bold text-[var(--moss)]">
       {children}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Panel — collapsible surface card
+// ---------------------------------------------------------------------------
+
+export interface PanelProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+export function Panel({ icon: Icon, title, description, children, defaultOpen = false }: PanelProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className="surface rounded-[var(--radius)] overflow-hidden">
+      {/* Header */}
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => {
+          tap();
+          setOpen((prev) => !prev);
+        }}
+        className="focus-ring pressable flex w-full items-center gap-3 px-5 py-4 text-left"
+      >
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[rgba(49,92,67,.1)] text-[var(--moss)]">
+          <Icon className="text-base" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-[var(--ink)]">{title}</p>
+          {description ? (
+            <p className="mt-0.5 truncate text-sm text-[var(--ink-soft)]">{description}</p>
+          ) : null}
+        </div>
+        <div className="shrink-0 text-[var(--ink-soft)]">
+          {open ? <FiChevronUp className="text-lg" /> : <FiChevronDown className="text-lg" />}
+        </div>
+      </button>
+
+      {/* Body */}
+      {open ? (
+        <div className="border-t border-[rgba(83,97,87,.12)] px-5 py-5">{children}</div>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// InlineError — field-level validation error message
+// ---------------------------------------------------------------------------
+
+export const InlineError = React.forwardRef<
+  HTMLParagraphElement,
+  { message?: string; id?: string }
+>(function InlineError({ message, id }, ref) {
+  if (!message) return null;
+
+  return (
+    <p
+      ref={ref}
+      id={id}
+      role="alert"
+      tabIndex={-1}
+      className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[var(--danger)]"
+    >
+      <FiAlertCircle className="shrink-0 text-sm" />
+      {message}
+    </p>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// EmptyState — centered icon + message for empty lists
+// ---------------------------------------------------------------------------
+
+export interface EmptyStateProps {
+  icon: React.ComponentType<{ className?: string }>;
+  message: string;
+}
+
+export function EmptyState({ icon: Icon, message }: EmptyStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+      <Icon className="text-4xl text-[var(--ink-soft)] opacity-40" />
+      <p className="text-sm text-[var(--ink-soft)]">{message}</p>
+    </div>
   );
 }

@@ -41,6 +41,20 @@ router.post(
   subjectController.assignToClass
 );
 
+// GET all assignments for the school (must be before /:classId to avoid conflict)
+router.get(
+  "/assignments",
+  authorize(UserRole.SCHOOL_ADMIN),
+  subjectController.getAllAssignments
+);
+
+// DELETE a specific assignment by id
+router.delete(
+  "/assignments/:id",
+  authorize(UserRole.SCHOOL_ADMIN),
+  subjectController.deleteAssignment
+);
+
 router.get(
   "/assignments/:classId",
   subjectController.getClassAssignments

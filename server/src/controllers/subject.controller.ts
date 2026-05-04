@@ -210,6 +210,58 @@ class SubjectController {
   }
   
   /**
+   * Get all assignments for a school
+   * GET /api/v1/subjects/assignments
+   */
+  async getAllAssignments(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const schoolId = req.user!.schoolId;
+
+      const assignments = await ClassSubject.find({ schoolId })
+        .populate("subjectId", "name code")
+        .populate("teacherId", "firstName lastName")
+        .populate("classId", "name level section")
+        .populate("sessionId", "name");
+
+      sendSuccess(res, assignments, "Assignments retrieved successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete an assignment
+   * DELETE /api/v1/subjects/assignments/:id
+   */
+  async deleteAssignment(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const schoolId = req.user!.schoolId;
+
+      const assignment = await ClassSubject.findOneAndDelete({
+        _id: id,
+        schoolId,
+      });
+
+      if (!assignment) {
+        throw new NotFoundError("Assignment not found");
+      }
+
+      sendSuccess(res, null, "Assignment deleted successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Update assignment (e.g., change teacher)
    * PATCH /api/v1/subjects/assignments/:id
    */
