@@ -11,6 +11,11 @@ const studentSchema = new Schema<StudentDocument>(
       required: [true, 'User reference is required'],
       unique: true,
     },
+    parentUserId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     schoolId: {
       type: Schema.Types.ObjectId,
       ref: 'School',
@@ -60,8 +65,8 @@ const studentSchema = new Schema<StudentDocument>(
     },
     status: {
       type: String,
-      enum: ['active', 'graduated', 'transferred', 'expelled', 'withdrawn'] as StudentStatus[],
-      default: 'active',
+      enum: Object.values(StudentStatus),
+      default: StudentStatus.ACTIVE,
     },
   },
   {
@@ -77,12 +82,19 @@ studentSchema.index({ schoolId: 1, studentId: 1 }, { unique: true });
 // Other indexes
 studentSchema.index({ schoolId: 1, classId: 1 });
 studentSchema.index({ schoolId: 1, status: 1 });
-studentSchema.index({ userId: 1 });
+studentSchema.index({ schoolId: 1, parentUserId: 1 });
 
 // Virtual to populate user details
 studentSchema.virtual('user', {
   ref: 'User',
   localField: 'userId',
+  foreignField: '_id',
+  justOne: true,
+});
+
+studentSchema.virtual('parentUser', {
+  ref: 'User',
+  localField: 'parentUserId',
   foreignField: '_id',
   justOne: true,
 });

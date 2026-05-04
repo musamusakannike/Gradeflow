@@ -6,10 +6,200 @@ import { ClassSubject } from "../models/class-subject.model";
 import { Term } from "../models/term.model";
 import { Class } from "../models/class.model";
 import { User } from "../models/user.model";
+import { ResultBatch } from "../models/result-batch.model";
+import { School } from "../models/school.model";
 import { ResultSummary } from "../types";
-import { NotFoundError, ForbiddenError } from "../utils/errors.util";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/errors.util";
 import { logger } from "../utils/logger.util";
 import { getGradePoint } from "../utils/helpers.util";
+import { sendResultNotificationEmail } from "./email.service";
+import { sendResultNotification } from "./notification.service";
+
+const getReleasedBatch = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+) => {
+  return ResultBatch.findOne({
+    classId,
+    termId,
+    schoolId,
+    status: "released",
+  });
+};
+
+const ensureResultIsEditable = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+): Promise<void> => {
+  const released = await getReleasedBatch(classId, termId, schoolId);
+  if (released) {
+    throw new ForbiddenError(
+      "Scores cannot be edited after results are released. Unrelease the result first.",
+      "RESULT_RELEASED",
+    );
+  }
+};
+
+const ensureTeacherOwnsAssignment = (
+  classSubject: InstanceType<typeof ClassSubject>,
+  teacherId?: Types.ObjectId,
+): void => {
+  if (!teacherId) return;
+
+  if (classSubject.teacherId.toString() !== teacherId.toString()) {
+    throw new ForbiddenError(
+      "You can only access scores for subjects assigned to you",
+      "UNASSIGNED_SUBJECT",
+    );
+  }
+};
+
+export const compileResultBatch = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+  compiledBy: Types.ObjectId,
+) => {
+  const [classDoc, term] = await Promise.all([
+    Class.findOne({ _id: classId, schoolId }),
+    Term.findOne({ _id: termId, schoolId }),
+  ]);
+
+  if (!classDoc) {
+    throw new NotFoundError("Class not found");
+  }
+
+  if (!term) {
+    throw new NotFoundError("Term not found");
+  }
+
+  const existing = await ResultBatch.findOne({ classId, termId, schoolId });
+  if (existing?.status === "released") {
+    throw new ForbiddenError(
+      "Released results cannot be recompiled. Unrelease the result first.",
+      "RESULT_RELEASED",
+    );
+  }
+
+  const [totalStudents, totalSubjects, totalScores] = await Promise.all([
+    Student.countDocuments({ classId, schoolId, status: "active" }),
+    ClassSubject.countDocuments({
+      classId,
+      schoolId,
+      sessionId: term.sessionId,
+    }),
+    Score.countDocuments({
+      schoolId,
+      termId,
+      classSubjectId: {
+        $in: await ClassSubject.find({
+          classId,
+          schoolId,
+          sessionId: term.sessionId,
+        }).distinct("_id"),
+      },
+    }),
+  ]);
+
+  if (totalStudents === 0) {
+    throw new BadRequestError("No active students found in this class");
+  }
+
+  if (totalSubjects === 0) {
+    throw new BadRequestError("No subjects assigned to this class for the session");
+  }
+
+  const batch = await ResultBatch.findOneAndUpdate(
+    { classId, termId, schoolId },
+    {
+      $set: {
+        status: "compiled",
+        totalStudents,
+        totalSubjects,
+        totalScores,
+        compiledBy,
+        compiledAt: new Date(),
+        releasedBy: null,
+        releasedAt: null,
+      },
+    },
+    { new: true, upsert: true, runValidators: true },
+  );
+
+  return batch;
+};
+
+export const releaseResultBatch = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+  releasedBy: Types.ObjectId,
+) => {
+  const batch = await ResultBatch.findOne({ classId, termId, schoolId });
+
+  if (!batch) {
+    throw new BadRequestError("Compile this class result before releasing it");
+  }
+
+  if (batch.status === "draft") {
+    throw new BadRequestError("Compile this class result before releasing it");
+  }
+
+  batch.status = "released";
+  batch.releasedBy = releasedBy;
+  batch.releasedAt = new Date();
+  await batch.save();
+
+  await notifyResultRelease(classId, termId, schoolId);
+
+  return batch;
+};
+
+export const unreleaseResultBatch = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+  unreleasedBy: Types.ObjectId,
+) => {
+  const batch = await ResultBatch.findOne({ classId, termId, schoolId });
+
+  if (!batch) {
+    throw new NotFoundError("Result batch not found");
+  }
+
+  batch.status = "compiled";
+  batch.unreleasedBy = unreleasedBy;
+  batch.unreleasedAt = new Date();
+  batch.releasedBy = undefined;
+  batch.releasedAt = undefined;
+  await batch.save();
+
+  return batch;
+};
+
+export const getResultBatchStatus = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+) => {
+  const batch = await ResultBatch.findOne({ classId, termId, schoolId })
+    .populate("classId", "name level section")
+    .populate("termId", "name termNumber");
+
+  return (
+    batch || {
+      classId,
+      termId,
+      schoolId,
+      status: "draft",
+      totalStudents: 0,
+      totalSubjects: 0,
+      totalScores: 0,
+    }
+  );
+};
 
 /**
  * Check if student has paid fees for a term
@@ -38,7 +228,7 @@ export const getStudentResult = async (
   checkFees: boolean = true,
 ): Promise<ResultSummary> => {
   // Get student details
-  const student = await Student.findById(studentId).populate("userId");
+  const student = await Student.findOne({ _id: studentId, schoolId }).populate("userId");
   if (!student) {
     throw new NotFoundError("Student not found");
   }
@@ -61,14 +251,28 @@ export const getStudentResult = async (
 
   // Get term details
   const term = await Term.findById(termId);
-  if (!term) {
+  if (!term || term.schoolId.toString() !== schoolId.toString()) {
     throw new NotFoundError("Term not found");
   }
 
   // Get class details
-  const classDoc = await Class.findById(student.classId);
+  const classDoc = await Class.findOne({ _id: student.classId, schoolId });
   if (!classDoc) {
     throw new NotFoundError("Class not found");
+  }
+
+  if (checkFees) {
+    const released = await getReleasedBatch(
+      student.classId as Types.ObjectId,
+      termId,
+      schoolId,
+    );
+    if (!released) {
+      throw new ForbiddenError(
+        "Results have not been released for this term",
+        "RESULT_NOT_RELEASED",
+      );
+    }
   }
 
   // Get all scores for the student in this term
@@ -198,6 +402,143 @@ export const getClassResults = async (
   return { results, classStats };
 };
 
+export const getClassAnalytics = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+) => {
+  const classSubjectIds = await ClassSubject.find({ classId, schoolId })
+    .distinct("_id");
+
+  const scores = await Score.find({
+    schoolId,
+    termId,
+    classSubjectId: { $in: classSubjectIds },
+  }).populate({
+    path: "classSubjectId",
+    populate: { path: "subjectId", select: "name code" },
+  });
+
+  const totals = scores.map((score) => score.total);
+  const passed = scores.filter((score) => score.total >= 50).length;
+  const failed = scores.length - passed;
+
+  const bySubjectMap = new Map<
+    string,
+    { subject: string; code: string; scores: number[]; passed: number }
+  >();
+
+  for (const score of scores) {
+    const classSubject = score.classSubjectId as unknown as {
+      subjectId: { name: string; code: string };
+    };
+    const key = classSubject.subjectId.code;
+    const current =
+      bySubjectMap.get(key) ||
+      {
+        subject: classSubject.subjectId.name,
+        code: classSubject.subjectId.code,
+        scores: [],
+        passed: 0,
+      };
+
+    current.scores.push(score.total);
+    if (score.total >= 50) current.passed += 1;
+    bySubjectMap.set(key, current);
+  }
+
+  const bySubject = Array.from(bySubjectMap.values()).map((item) => ({
+    subject: item.subject,
+    code: item.code,
+    totalScores: item.scores.length,
+    averageScore:
+      item.scores.length > 0
+        ? Math.round(
+            (item.scores.reduce((sum, score) => sum + score, 0) /
+              item.scores.length) *
+              100,
+          ) / 100
+        : 0,
+    highestScore: item.scores.length > 0 ? Math.max(...item.scores) : 0,
+    lowestScore: item.scores.length > 0 ? Math.min(...item.scores) : 0,
+    passRate:
+      item.scores.length > 0
+        ? Math.round((item.passed / item.scores.length) * 10000) / 100
+        : 0,
+  }));
+
+  return {
+    totals: {
+      totalScores: scores.length,
+      averageScore:
+        totals.length > 0
+          ? Math.round(
+              (totals.reduce((sum, score) => sum + score, 0) / totals.length) *
+                100,
+            ) / 100
+          : 0,
+      highestScore: totals.length > 0 ? Math.max(...totals) : 0,
+      lowestScore: totals.length > 0 ? Math.min(...totals) : 0,
+      passCount: passed,
+      failCount: failed,
+      passRate:
+        scores.length > 0 ? Math.round((passed / scores.length) * 10000) / 100 : 0,
+    },
+    bySubject,
+  };
+};
+
+const notifyResultRelease = async (
+  classId: Types.ObjectId,
+  termId: Types.ObjectId,
+  schoolId: Types.ObjectId,
+): Promise<void> => {
+  try {
+    const [school, term, students] = await Promise.all([
+      School.findById(schoolId).select("name"),
+      Term.findById(termId).select("name"),
+      Student.find({ classId, schoolId, status: "active" })
+        .populate("userId", "email firstName")
+        .populate("parentUserId", "email firstName"),
+    ]);
+
+    await Promise.all(
+      students.map(async (student) => {
+        const user = student.userId as unknown as {
+          email?: string;
+          firstName?: string;
+        };
+        const parent = student.parentUserId as unknown as {
+          email?: string;
+          firstName?: string;
+        } | null;
+
+        await Promise.all([
+          sendResultNotification(student._id as Types.ObjectId, term?.name || "Term"),
+          user?.email
+            ? sendResultNotificationEmail(
+                user.email,
+                user.firstName || "Student",
+                term?.name || "Term",
+                school?.name || "School",
+              )
+            : Promise.resolve(false),
+          parent?.email
+            ? sendResultNotificationEmail(
+                parent.email,
+                parent.firstName || "Parent",
+                term?.name || "Term",
+                school?.name || "School",
+              )
+            : Promise.resolve(false),
+        ]);
+      }),
+    );
+  } catch (error) {
+    logger.error("Failed to send result release notifications:", error);
+  }
+};
+
 /**
  * Get subject results for a class
  */
@@ -205,6 +546,7 @@ export const getSubjectResults = async (
   classSubjectId: Types.ObjectId,
   termId: Types.ObjectId,
   schoolId: Types.ObjectId,
+  teacherId?: Types.ObjectId,
 ): Promise<{
   scores: Array<{
     student: { id: string; name: string; studentId: string };
@@ -223,6 +565,22 @@ export const getSubjectResults = async (
     passRate: number;
   };
 }> => {
+  const classSubject = await ClassSubject.findOne({
+    _id: classSubjectId,
+    schoolId,
+  });
+
+  if (!classSubject) {
+    throw new NotFoundError("Class subject not found");
+  }
+
+  ensureTeacherOwnsAssignment(classSubject, teacherId);
+
+  const term = await Term.findOne({ _id: termId, schoolId });
+  if (!term) {
+    throw new NotFoundError("Term not found");
+  }
+
   const scores = await Score.find({
     classSubjectId,
     termId,
@@ -293,6 +651,7 @@ export const enterScores = async (
     exam?: number;
   },
   schoolId: Types.ObjectId,
+  teacherId?: Types.ObjectId,
 ): Promise<InstanceType<typeof Score>> => {
   // Verify student exists and belongs to school
   const student = await Student.findOne({ _id: data.studentId, schoolId });
@@ -308,6 +667,23 @@ export const enterScores = async (
   if (!classSubject) {
     throw new NotFoundError("Class subject not found");
   }
+
+  const term = await Term.findOne({ _id: data.termId, schoolId });
+  if (!term) {
+    throw new NotFoundError("Term not found");
+  }
+
+  ensureTeacherOwnsAssignment(classSubject, teacherId);
+
+  if (student.classId.toString() !== classSubject.classId.toString()) {
+    throw new BadRequestError("Student does not belong to this class subject's class");
+  }
+
+  await ensureResultIsEditable(
+    classSubject.classId as Types.ObjectId,
+    data.termId,
+    schoolId,
+  );
 
   // Find existing score or create new
   let score = await Score.findOne({
@@ -352,6 +728,7 @@ export const bulkEnterScores = async (
     exam?: number;
   }>,
   schoolId: Types.ObjectId,
+  teacherId?: Types.ObjectId,
 ): Promise<{ updated: number; created: number; errors: string[] }> => {
   const result = {
     updated: 0,
@@ -359,8 +736,45 @@ export const bulkEnterScores = async (
     errors: [] as string[],
   };
 
+  const classSubject = await ClassSubject.findOne({
+    _id: classSubjectId,
+    schoolId,
+  });
+
+  if (!classSubject) {
+    throw new NotFoundError("Class subject not found");
+  }
+
+  ensureTeacherOwnsAssignment(classSubject, teacherId);
+
+  const term = await Term.findOne({ _id: termId, schoolId });
+  if (!term) {
+    throw new NotFoundError("Term not found");
+  }
+
+  await ensureResultIsEditable(
+    classSubject.classId as Types.ObjectId,
+    termId,
+    schoolId,
+  );
+
   for (const scoreData of scores) {
     try {
+      const student = await Student.findOne({
+        _id: scoreData.studentId,
+        schoolId,
+      });
+
+      if (!student) {
+        throw new NotFoundError("Student not found");
+      }
+
+      if (student.classId.toString() !== classSubject.classId.toString()) {
+        throw new BadRequestError(
+          "Student does not belong to this class subject's class",
+        );
+      }
+
       const existing = await Score.findOne({
         studentId: scoreData.studentId,
         classSubjectId,

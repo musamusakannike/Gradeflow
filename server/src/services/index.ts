@@ -6,3 +6,5 @@ export * from './result.service';
 export * from './firebase.service';
 export * from './notification.service';
 export * from './student.service';
+export * from './result-pdf.service';
+export * from './dashboard.service';

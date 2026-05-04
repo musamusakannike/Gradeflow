@@ -1,0 +1,44 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_route_1 = __importDefault(require("./auth.route"));
+const academic_route_1 = __importDefault(require("./academic.route"));
+const class_route_1 = __importDefault(require("./class.route"));
+const subject_route_1 = __importDefault(require("./subject.route"));
+const staff_route_1 = __importDefault(require("./staff.route"));
+const student_route_1 = __importDefault(require("./student.route"));
+const score_route_1 = __importDefault(require("./score.route"));
+const result_route_1 = __importDefault(require("./result.route"));
+const finance_route_1 = __importDefault(require("./finance.route"));
+const school_route_1 = __importDefault(require("./school.route"));
+const dashboard_route_1 = __importDefault(require("./dashboard.route"));
+const router = (0, express_1.Router)();
+/**
+ * API v1 routes
+ */
+router.use("/auth", auth_route_1.default);
+router.use("/academic", academic_route_1.default);
+router.use("/classes", class_route_1.default);
+router.use("/subjects", subject_route_1.default);
+router.use("/staff", staff_route_1.default);
+router.use("/students", student_route_1.default);
+router.use("/scores", score_route_1.default);
+router.use("/results", result_route_1.default);
+router.use("/finance", finance_route_1.default);
+router.use("/school", school_route_1.default);
+router.use("/dashboard", dashboard_route_1.default);
+// router.use("/schools", schoolRoutes);
+// router.use("/users", userRoutes);
+// router.use("/students", studentRoutes);
+// router.use("/sessions", sessionRoutes);
+// router.use("/terms", termRoutes);
+// router.use("/classes", classRoutes);
+// router.use("/subjects", subjectRoutes);
+// router.use("/scores", scoreRoutes);
+// router.use("/results", resultRoutes);
+// router.use("/payments", paymentRoutes);
+exports.default = router;
+//# sourceMappingURL=index.js.map

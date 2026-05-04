@@ -4,3 +4,4 @@ export * from "./validation.middleware";
 export * from "./school.middleware";
 export * from "./upload.middleware";
 export * from "./rate-limit.middleware";
+export * from "./validation.middleware";

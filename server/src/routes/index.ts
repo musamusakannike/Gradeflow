@@ -1,0 +1,42 @@
+import { Router } from "express";
+import authRoutes from "./auth.route";
+import academicRoutes from "./academic.route";
+import classRoutes from "./class.route";
+import subjectRoutes from "./subject.route";
+import staffRoutes from "./staff.route";
+import studentRoutes from "./student.route";
+import scoreRoutes from "./score.route";
+import resultRoutes from "./result.route";
+import financeRoutes from "./finance.route";
+import schoolRoutes from "./school.route";
+import dashboardRoutes from "./dashboard.route";
+
+const router = Router();
+
+/**
+ * API v1 routes
+ */
+router.use("/auth", authRoutes);
+router.use("/academic", academicRoutes);
+router.use("/classes", classRoutes);
+router.use("/subjects", subjectRoutes);
+router.use("/staff", staffRoutes);
+router.use("/students", studentRoutes);
+router.use("/scores", scoreRoutes);
+router.use("/results", resultRoutes);
+router.use("/finance", financeRoutes);
+router.use("/school", schoolRoutes);
+router.use("/dashboard", dashboardRoutes);
+
+// router.use("/schools", schoolRoutes);
+// router.use("/users", userRoutes);
+// router.use("/students", studentRoutes);
+// router.use("/sessions", sessionRoutes);
+// router.use("/terms", termRoutes);
+// router.use("/classes", classRoutes);
+// router.use("/subjects", subjectRoutes);
+// router.use("/scores", scoreRoutes);
+// router.use("/results", resultRoutes);
+// router.use("/payments", paymentRoutes);
+
+export default router;

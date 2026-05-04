@@ -9,3 +9,4 @@ export * from "./class-subject.model";
 export * from "./score.model";
 export * from "./fee-status.model";
 export * from "./payment.model";
+export * from "./result-batch.model";

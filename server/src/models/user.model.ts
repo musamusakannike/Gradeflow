@@ -41,14 +41,8 @@ const userSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: [
-        "super_admin",
-        "school_admin",
-        "teacher",
-        "bursar",
-        "student",
-      ] as UserRole[],
-      default: "student",
+      enum: Object.values(UserRole),
+      default: UserRole.STUDENT,
     },
     schoolId: {
       type: Schema.Types.ObjectId,
@@ -108,7 +102,6 @@ userSchema.virtual("fullName").get(function (this: UserDocument) {
 
 // Indexes
 userSchema.index({ schoolId: 1, role: 1 });
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 

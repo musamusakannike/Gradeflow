@@ -79,6 +79,7 @@ const formatUserResponse = (user: UserDocument): LoginResponse["user"] => ({
  */
 export const registerSchool = async (data: {
   schoolName: string;
+  schoolCode?: string;
   schoolEmail: string;
   schoolPhone: string;
   schoolAddress: string;
@@ -106,9 +107,19 @@ export const registerSchool = async (data: {
     throw new ConflictError("User with this email already exists");
   }
 
+  if (data.schoolCode) {
+    const existingCode = await School.findOne({
+      code: data.schoolCode.toUpperCase(),
+    });
+    if (existingCode) {
+      throw new ConflictError("School with this code already exists");
+    }
+  }
+
   // Create school
   const school = await School.create({
     name: data.schoolName,
+    code: data.schoolCode?.toUpperCase(),
     email: data.schoolEmail.toLowerCase(),
     phone: data.schoolPhone,
     address: data.schoolAddress,
@@ -223,7 +234,13 @@ export const loginWithGoogle = async (
     }
 
     // Verify school exists
-    const school = await School.findById(schoolId);
+    const school = await School.findOne({
+      $or: [
+        { code: schoolId.toUpperCase() },
+        ...(Types.ObjectId.isValid(schoolId) ? [{ _id: schoolId }] : []),
+      ],
+    });
+
     if (!school || !school.isActive) {
       throw new NotFoundError("School not found or inactive");
     }
@@ -242,7 +259,7 @@ export const loginWithGoogle = async (
       googleId: uid,
       avatar: picture,
       role: "student",
-      schoolId,
+      schoolId: school._id,
       emailVerified: true,
       lastLogin: new Date(),
     });
@@ -496,4 +513,34 @@ export const createStudentUser = async (
   await sendWelcomeEmail(user.email, user.firstName, school.name, tempPassword);
 
   return { user, student };
+};
+
+/**
+ * Get user profile
+ */
+export const getUserProfile = async (userId: Types.ObjectId): Promise<LoginResponse["user"]> => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  return formatUserResponse(user);
+};
+
+/**
+ * Update user push token
+ */
+export const updatePushToken = async (
+  userId: Types.ObjectId,
+  pushToken: string,
+): Promise<void> => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  user.expoPushToken = pushToken;
+  await user.save();
 };

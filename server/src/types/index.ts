@@ -8,6 +8,7 @@ export enum UserRole {
   TEACHER = "teacher",
   BURSAR = "bursar",
   STUDENT = "student",
+  PARENT = "parent",
 }
 
 // User Status
@@ -30,6 +31,9 @@ export type FeeStatusType = "paid" | "unpaid" | "partial";
 
 // Payment Status
 export type PaymentStatus = "pending" | "success" | "failed" | "abandoned";
+
+// Result batch status
+export type ResultBatchStatus = "draft" | "compiled" | "released";
 
 // Score Types
 export type AssessmentType = "test1" | "test2" | "exam";
@@ -114,6 +118,7 @@ export interface IUser extends BaseDocument {
 // Student Document
 export interface IStudent extends BaseDocument {
   userId: Types.ObjectId;
+  parentUserId?: Types.ObjectId;
   schoolId: Types.ObjectId;
   studentId: string;
   classId: Types.ObjectId;
@@ -214,6 +219,23 @@ export interface IPayment extends BaseDocument {
   paidAt?: Date;
   channel?: string;
   metadata?: Record<string, unknown>;
+}
+
+// Result Batch Document
+export interface IResultBatch extends BaseDocument {
+  schoolId: Types.ObjectId;
+  classId: Types.ObjectId;
+  termId: Types.ObjectId;
+  status: ResultBatchStatus;
+  totalStudents: number;
+  totalSubjects: number;
+  totalScores: number;
+  compiledBy: Types.ObjectId;
+  compiledAt: Date;
+  releasedBy?: Types.ObjectId;
+  releasedAt?: Date;
+  unreleasedBy?: Types.ObjectId;
+  unreleasedAt?: Date;
 }
 
 // JWT Payload
