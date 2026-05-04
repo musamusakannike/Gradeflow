@@ -54,7 +54,44 @@ export type ResultSubject = {
   teacher: string;
 };
 
-export type DashboardSummary = Record<string, unknown>;
+export type AcademicSession = {
+  _id: string;
+  name: string;           // e.g. "2024/2025"
+  startYear: number;
+  isCurrent: boolean;
+};
+
+export type AcademicTerm = {
+  _id: string;
+  name: string;           // "First Term" | "Second Term" | "Third Term"
+  startDate: string;      // ISO date string "YYYY-MM-DD"
+  endDate: string;
+  isCurrent: boolean;
+  sessionId: string;
+};
+
+export type DashboardSummary = {
+  counts: {
+    students: number;
+    staff: number;
+    unpaidFees: number;
+    releasedResults: number;
+  };
+  currentSession: { _id: string; name: string } | null;
+  currentTerm: { _id: string; name: string } | null;
+};
+
+export type FeeStats = {
+  totalExpected: number;
+  totalCollected: number;
+  outstandingCount: number;
+};
+
+export type StudentOption = {
+  _id: string;
+  studentId: string;
+  displayName: string;    // "First Last (GFS/2026/0194)"
+};
 
 export interface Teacher {
   id: string;

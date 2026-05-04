@@ -1,11 +1,12 @@
 "use client";
 
-import { FiBook, FiBookOpen, FiLink, FiUsers } from "react-icons/fi";
+import { FiBook, FiBookOpen, FiCalendar, FiLink, FiUsers } from "react-icons/fi";
 import { Panel, SectionHeader } from "./ui";
 import { TeachersPanel } from "./teachers-panel";
 import { ClassesPanel } from "./classes-panel";
 import { SubjectsPanel } from "./subjects-panel";
 import { AssignmentsPanel } from "./assignments-panel";
+import { SessionsPanel } from "./sessions-panel";
 
 export function AcademicsScreen() {
   return (
@@ -51,6 +52,15 @@ export function AcademicsScreen() {
           defaultOpen={false}
         >
           <AssignmentsPanel />
+        </Panel>
+
+        <Panel
+          icon={FiCalendar}
+          title="Sessions & Terms"
+          description="Create academic sessions and manage term dates and current status."
+          defaultOpen={false}
+        >
+          <SessionsPanel />
         </Panel>
       </div>
     </div>
