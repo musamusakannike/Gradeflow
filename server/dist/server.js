@@ -12,10 +12,13 @@ const morgan_1 = __importDefault(require("morgan"));
 const routes_1 = __importDefault(require("./routes"));
 const error_middleware_1 = require("./middleware/error.middleware");
 const db_config_1 = require("./config/db.config");
+const bootstrap_1 = require("./scripts/bootstrap");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
 // Connect to Database
-(0, db_config_1.connectDatabase)();
+(0, db_config_1.connectDatabase)().then(() => {
+    (0, bootstrap_1.bootstrap)();
+});
 // Middleware
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)());

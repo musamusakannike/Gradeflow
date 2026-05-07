@@ -12,6 +12,10 @@ class StudentController {
     async createStudent(req, res, next) {
         try {
             const schoolId = req.user.schoolId.toString();
+            // Normalize gender to lowercase so it matches the Mongoose enum
+            if (req.body.gender) {
+                req.body.gender = req.body.gender.toLowerCase();
+            }
             const student = await student_service_1.studentService.createStudent({
                 ...req.body,
                 schoolId,
@@ -81,6 +85,9 @@ class StudentController {
         try {
             const id = req.params.id;
             const schoolId = req.user.schoolId.toString();
+            if (req.body.gender) {
+                req.body.gender = req.body.gender.toLowerCase();
+            }
             const student = await student_service_1.studentService.updateStudent(id, schoolId, req.body);
             (0, response_util_1.sendSuccess)(res, student, "Student updated successfully");
         }

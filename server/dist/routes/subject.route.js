@@ -19,6 +19,10 @@ router
     .patch((0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), (0, validation_middleware_1.validateRequest)(academic_structure_validation_1.subjectValidation.updateSubject), subject_controller_1.subjectController.updateSubject);
 // --- Assignments ---
 router.post("/assign", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), (0, validation_middleware_1.validateRequest)(academic_structure_validation_1.classSubjectValidation.assignSubject), subject_controller_1.subjectController.assignToClass);
+// GET all assignments for the school (must be before /:classId to avoid conflict)
+router.get("/assignments", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), subject_controller_1.subjectController.getAllAssignments);
+// DELETE a specific assignment by id
+router.delete("/assignments/:id", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), subject_controller_1.subjectController.deleteAssignment);
 router.get("/assignments/:classId", subject_controller_1.subjectController.getClassAssignments);
 router.patch("/assignments/:id", (0, auth_middleware_1.authorize)(types_1.UserRole.SCHOOL_ADMIN), (0, validation_middleware_1.validateRequest)(academic_structure_validation_1.classSubjectValidation.updateAssignment), subject_controller_1.subjectController.updateAssignment);
 exports.default = router;

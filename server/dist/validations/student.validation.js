@@ -11,9 +11,12 @@ exports.studentValidation = {
             middleName: zod_1.z.string().optional(),
             email: zod_1.z.string().email("Invalid email address").optional().or(zod_1.z.literal("")),
             dateOfBirth: zod_1.z.string().datetime().optional(),
-            gender: zod_1.z.enum(["male", "female"], {
-                message: "Gender must be either male or female",
-            }),
+            gender: zod_1.z
+                .string()
+                .transform((v) => v.toLowerCase())
+                .pipe(zod_1.z.enum(["male", "female", "other"], {
+                message: "Gender must be male, female, or other",
+            })),
             address: zod_1.z.string().optional(),
             phoneNumber: zod_1.z.string().optional(),
             guardianName: zod_1.z.string().min(2, "Guardian name is required"),
@@ -31,7 +34,11 @@ exports.studentValidation = {
             middleName: zod_1.z.string().optional(),
             email: zod_1.z.string().email().optional(),
             dateOfBirth: zod_1.z.string().datetime().optional(),
-            gender: zod_1.z.enum(["male", "female"]).optional(),
+            gender: zod_1.z
+                .string()
+                .transform((v) => v.toLowerCase())
+                .pipe(zod_1.z.enum(["male", "female", "other"]))
+                .optional(),
             address: zod_1.z.string().optional(),
             phoneNumber: zod_1.z.string().optional(),
             guardianName: zod_1.z.string().optional(),
@@ -51,7 +58,10 @@ exports.studentValidation = {
                 middleName: zod_1.z.string().optional(),
                 email: zod_1.z.string().email().optional(),
                 dateOfBirth: zod_1.z.string().optional(), // Allow string for CSV parsing later
-                gender: zod_1.z.enum(["male", "female"]),
+                gender: zod_1.z
+                    .string()
+                    .transform((v) => v.toLowerCase())
+                    .pipe(zod_1.z.enum(["male", "female", "other"])),
                 guardianName: zod_1.z.string().min(2),
                 guardianEmail: zod_1.z.string().email().optional(),
                 guardianPhone: zod_1.z.string().min(10),
