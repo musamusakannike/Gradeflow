@@ -170,13 +170,19 @@ async function seed() {
     logger.info("Session and terms created.");
 
     // 4. Create Subjects
-    const juniorSubjects = await Subject.insertMany(
-      JUNIOR_SUBJECTS.map((s) => ({ ...s, schoolId: school!._id }))
+    const allSubjectData = [...JUNIOR_SUBJECTS, ...SENIOR_SUBJECTS];
+    const uniqueSubjectsMap = new Map();
+    allSubjectData.forEach(s => {
+        if (!uniqueSubjectsMap.has(s.name)) {
+            uniqueSubjectsMap.set(s.name, s);
+        }
+    });
+    
+    const uniqueSubjectsList = Array.from(uniqueSubjectsMap.values());
+    const insertedSubjects = await Subject.insertMany(
+      uniqueSubjectsList.map((s) => ({ ...s, schoolId: school!._id }))
     );
-    const seniorSubjects = await Subject.insertMany(
-      SENIOR_SUBJECTS.map((s) => ({ ...s, schoolId: school!._id }))
-    );
-    logger.info("Subjects created.");
+    logger.info(`${insertedSubjects.length} unique subjects created.`);
 
     // 5. Create Teachers
     const teachers: any[] = [];
@@ -226,9 +232,13 @@ async function seed() {
     // 7. Assign Subjects to Classes
     const classSubjects: any[] = [];
     for (const cls of classes) {
-      const relevantSubjects = cls.level <= 3 ? juniorSubjects : seniorSubjects;
+      const relevantSubjectNames = cls.level <= 3 
+        ? JUNIOR_SUBJECTS.map(s => s.name) 
+        : SENIOR_SUBJECTS.map(s => s.name);
       
-      // Assign all relevant subjects to this class
+      const relevantSubjects = insertedSubjects.filter(s => relevantSubjectNames.includes(s.name));
+      
+      // Assign relevant subjects to this class
       for (const sub of relevantSubjects) {
         // If it's senior secondary, filter by arm
         if (cls.level > 3) {
