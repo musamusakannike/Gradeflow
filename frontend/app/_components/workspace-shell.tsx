@@ -52,7 +52,9 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           G
         </span>
         <span>
-          <span className="block font-display text-xl font-black">GradeFlow</span>
+          <span className="block font-display text-xl font-black">
+            GradeFlow
+          </span>
           <span className="text-xs text-white/45">school operations</span>
         </span>
       </Link>
@@ -89,14 +91,19 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="min-w-0">
             <p className="truncate font-black">
-              {user ? `${user.firstName} ${user.lastName}` : "Demo user"}
+              {user && `${user.firstName} ${user.lastName}`}
             </p>
             <p className="truncate text-xs text-white/48">
               {user?.role?.replace("_", " ") || "preview mode"}
             </p>
           </div>
         </div>
-        <Button variant="ghost" icon={FiLogOut} className="mt-4 w-full text-white/70 hover:bg-white/10" onClick={logout}>
+        <Button
+          variant="ghost"
+          icon={FiLogOut}
+          className="mt-4 w-full text-white/70 hover:bg-white/10"
+          onClick={logout}
+        >
           Sign out
         </Button>
       </div>

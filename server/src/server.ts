@@ -8,12 +8,15 @@ import morgan from "morgan";
 import routes from "./routes";
 import { errorHandler } from "./middleware/error.middleware";
 import { connectDatabase } from "./config/db.config";
+import { bootstrap } from "./scripts/bootstrap";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Connect to Database
-connectDatabase();
+connectDatabase().then(() => {
+  bootstrap();
+});
 
 // Middleware
 app.use(helmet());
