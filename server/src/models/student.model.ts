@@ -37,7 +37,7 @@ const studentSchema = new Schema<StudentDocument>(
     },
     gender: {
       type: String,
-      enum: ['male', 'female'] as Gender[],
+      enum: ['male', 'female', 'other'],
       required: [true, 'Gender is required'],
     },
     address: {

@@ -9,9 +9,14 @@ export const studentValidation = {
       middleName: z.string().optional(),
       email: z.string().email("Invalid email address").optional().or(z.literal("")),
       dateOfBirth: z.string().datetime().optional(),
-      gender: z.enum(["male", "female"], {
-        message: "Gender must be either male or female",
-      }),
+      gender: z
+        .string()
+        .transform((v) => v.toLowerCase())
+        .pipe(
+          z.enum(["male", "female", "other"], {
+            message: "Gender must be male, female, or other",
+          })
+        ),
       address: z.string().optional(),
       phoneNumber: z.string().optional(),
       guardianName: z.string().min(2, "Guardian name is required"),
@@ -30,7 +35,11 @@ export const studentValidation = {
       middleName: z.string().optional(),
       email: z.string().email().optional(),
       dateOfBirth: z.string().datetime().optional(),
-      gender: z.enum(["male", "female"]).optional(),
+      gender: z
+        .string()
+        .transform((v) => v.toLowerCase())
+        .pipe(z.enum(["male", "female", "other"]))
+        .optional(),
       address: z.string().optional(),
       phoneNumber: z.string().optional(),
       guardianName: z.string().optional(),
@@ -52,7 +61,10 @@ export const studentValidation = {
           middleName: z.string().optional(),
           email: z.string().email().optional(),
           dateOfBirth: z.string().optional(), // Allow string for CSV parsing later
-          gender: z.enum(["male", "female"]),
+          gender: z
+            .string()
+            .transform((v) => v.toLowerCase())
+            .pipe(z.enum(["male", "female", "other"])),
           guardianName: z.string().min(2),
           guardianEmail: z.string().email().optional(),
           guardianPhone: z.string().min(10),
