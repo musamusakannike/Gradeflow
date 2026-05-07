@@ -270,6 +270,7 @@ async function seed() {
     // 8. Create Students and Scores
     const studentPassword = await hashPassword("Student123!");
     let studentCount = 0;
+    const usedStudentIds = new Set<string>();
     
     for (const cls of classes) {
       const numStudents = 10 + Math.floor(Math.random() * 6); // 10-15 students per class
@@ -290,10 +291,17 @@ async function seed() {
           emailVerified: true,
         });
 
+        // Generate a unique student ID
+        let studentId = "";
+        do {
+          studentId = generateStudentId(school.code, currentYear);
+        } while (usedStudentIds.has(studentId));
+        usedStudentIds.add(studentId);
+
         const student = await Student.create({
           userId: user._id,
           schoolId: school._id,
-          studentId: generateStudentId(school.code, currentYear),
+          studentId: studentId,
           classId: cls._id,
           dateOfBirth: new Date(currentYear - (10 + cls.level), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
           gender: Math.random() > 0.5 ? "male" : "female",
