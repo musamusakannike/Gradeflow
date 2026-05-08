@@ -13,10 +13,12 @@ import {
 } from "@/lib/admin-forms";
 import { AcademicTerm, SchoolClass, StudentOption } from "@/types/gradeflow";
 import { Button, InlineError, SectionHeader } from "./ui";
+import { AnalyticsModal } from "./analytics-modal";
 
 export function ResultsScreen() {
   const [status, setStatus] = useState<Record<string, unknown> | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Shared reference data
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -186,7 +188,7 @@ export function ResultsScreen() {
         <section className="surface rounded-[28px] p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-black">Subject spread</h2>
-            <Button variant="secondary" icon={FiEye}>Analytics</Button>
+            <Button variant="secondary" icon={FiEye} onClick={() => setShowAnalytics(true)}>Analytics</Button>
           </div>
           <div className="mt-5 h-[280px]">
             {mounted ? (
@@ -245,6 +247,16 @@ export function ResultsScreen() {
           <Button icon={FiDownload}>Download</Button>
         </div>
       </form>
+
+      {showAnalytics && (
+        <AnalyticsModal
+          onClose={() => setShowAnalytics(false)}
+          classes={classes}
+          terms={terms}
+          initialClassId={selectedClassId || undefined}
+          initialTermId={selectedTermId || undefined}
+        />
+      )}
     </div>
   );
 }
