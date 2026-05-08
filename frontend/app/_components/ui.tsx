@@ -195,3 +195,126 @@ export function EmptyState({ icon: Icon, message }: EmptyStateProps) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Pagination — navigation for long lists
+// ---------------------------------------------------------------------------
+
+export interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems?: number;
+  itemsPerPage?: number;
+}
+
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalItems,
+  itemsPerPage,
+}: PaginationProps) {
+  if (totalPages <= 1) return null;
+
+  const pages = [];
+  const maxVisible = 5;
+
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+
+  return (
+    <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <div className="text-sm text-[var(--ink-soft)]">
+        {totalItems !== undefined && itemsPerPage !== undefined ? (
+          <>
+            Showing <span className="font-bold text-[var(--ink)]">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+            <span className="font-bold text-[var(--ink)]">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{" "}
+            <span className="font-bold text-[var(--ink)]">{totalItems}</span> items
+          </>
+        ) : (
+          <>
+            Page <span className="font-bold text-[var(--ink)]">{currentPage}</span> of{" "}
+            <span className="font-bold text-[var(--ink)]">{totalPages}</span>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="pressable flex size-10 items-center justify-center rounded-xl bg-[rgba(49,92,67,.05)] text-[var(--moss)] disabled:opacity-30"
+        >
+          <FiChevronDown className="rotate-90" />
+        </button>
+
+        {start > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => onPageChange(1)}
+              className={clsx(
+                "pressable flex size-10 items-center justify-center rounded-xl text-sm font-bold",
+                currentPage === 1 ? "bg-[var(--moss)] text-[var(--white)]" : "bg-[rgba(49,92,67,.05)] text-[var(--moss)]"
+              )}
+            >
+              1
+            </button>
+            {start > 2 && <span className="px-1 text-[var(--ink-soft)]">...</span>}
+          </>
+        )}
+
+        {pages.map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onPageChange(p)}
+            className={clsx(
+              "pressable flex size-10 items-center justify-center rounded-xl text-sm font-bold transition-all",
+              currentPage === p
+                ? "bg-[var(--moss)] text-[var(--white)] shadow-lg"
+                : "bg-[rgba(49,92,67,.05)] text-[var(--moss)] hover:bg-[rgba(49,92,67,.1)]"
+            )}
+          >
+            {p}
+          </button>
+        ))}
+
+        {end < totalPages && (
+          <>
+            {end < totalPages - 1 && <span className="px-1 text-[var(--ink-soft)]">...</span>}
+            <button
+              type="button"
+              onClick={() => onPageChange(totalPages)}
+              className={clsx(
+                "pressable flex size-10 items-center justify-center rounded-xl text-sm font-bold",
+                currentPage === totalPages ? "bg-[var(--moss)] text-[var(--white)]" : "bg-[rgba(49,92,67,.05)] text-[var(--moss)]"
+              )}
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="pressable flex size-10 items-center justify-center rounded-xl bg-[rgba(49,92,67,.05)] text-[var(--moss)] disabled:opacity-30"
+        >
+          <FiChevronDown className="-rotate-90" />
+        </button>
+      </div>
+    </div>
+  );
+}

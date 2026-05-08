@@ -54,8 +54,28 @@ class SubjectController {
   ): Promise<void> {
     try {
       const schoolId = req.user!.schoolId;
-      const subjects = await Subject.find({ schoolId }).sort({ name: 1 });
-      sendSuccess(res, subjects, "Subjects retrieved successfully");
+      const { page, limit } = req.query;
+
+      const pageNum = page ? parseInt(page as string) : 1;
+      const limitNum = limit ? parseInt(limit as string) : 50;
+      const skip = (pageNum - 1) * limitNum;
+
+      const query = { schoolId };
+
+      const [subjects, total] = await Promise.all([
+        Subject.find(query)
+          .sort({ name: 1 })
+          .skip(skip)
+          .limit(limitNum),
+        Subject.countDocuments(query)
+      ]);
+
+      sendSuccess(res, {
+        subjects,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum)
+      }, "Subjects retrieved successfully");
     } catch (error) {
       next(error);
     }
@@ -220,14 +240,32 @@ class SubjectController {
   ): Promise<void> {
     try {
       const schoolId = req.user!.schoolId;
+      const { page, limit } = req.query;
 
-      const assignments = await ClassSubject.find({ schoolId })
-        .populate("subjectId", "name code")
-        .populate("teacherId", "firstName lastName")
-        .populate("classId", "name level section")
-        .populate("sessionId", "name");
+      const pageNum = page ? parseInt(page as string) : 1;
+      const limitNum = limit ? parseInt(limit as string) : 50;
+      const skip = (pageNum - 1) * limitNum;
 
-      sendSuccess(res, assignments, "Assignments retrieved successfully");
+      const query = { schoolId };
+
+      const [assignments, total] = await Promise.all([
+        ClassSubject.find(query)
+          .populate("subjectId", "name code")
+          .populate("teacherId", "firstName lastName")
+          .populate("classId", "name level section")
+          .populate("sessionId", "name")
+          .skip(skip)
+          .limit(limitNum)
+          .sort({ createdAt: -1 }),
+        ClassSubject.countDocuments(query)
+      ]);
+
+      sendSuccess(res, {
+        assignments,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum)
+      }, "Assignments retrieved successfully");
     } catch (error) {
       next(error);
     }

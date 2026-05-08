@@ -6,7 +6,7 @@ import { FiAlertCircle, FiRefreshCw, FiUserCheck, FiUsers } from "react-icons/fi
 import { api, ApiError } from "@/lib/api";
 import { mapApiErrorToFieldError, validateTeacherForm } from "@/lib/admin-forms";
 import type { Teacher } from "@/types/gradeflow";
-import { Button, EmptyState, InlineError } from "./ui";
+import { Button, EmptyState, InlineError, Pagination } from "./ui";
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -15,11 +15,11 @@ import { Button, EmptyState, InlineError } from "./ui";
 function StatusBadge({ status }: { status: Teacher["status"] }) {
   const styles: Record<Teacher["status"], string> = {
     active:
-      "bg-[rgba(49,92,67,.12)] text-[var(--moss)] border border-[rgba(49,92,67,.2)]",
+      "bg-[rgba(49,92,67,.12)] text-moss border border-[rgba(49,92,67,.2)]",
     inactive:
-      "bg-[rgba(83,97,87,.1)] text-[var(--ink-soft)] border border-[rgba(83,97,87,.18)]",
+      "bg-[rgba(83,97,87,.1)] text-ink-soft border border-[rgba(83,97,87,.18)]",
     suspended:
-      "bg-[rgba(182,69,69,.1)] text-[var(--danger)] border border-[rgba(182,69,69,.2)]",
+      "bg-[rgba(182,69,69,.1)] text-danger border border-[rgba(182,69,69,.2)]",
   };
 
   return (
@@ -66,7 +66,7 @@ function TeacherList({
   return (
     <div className="mt-6 overflow-x-auto">
       <table className="w-full min-w-[560px] border-separate border-spacing-y-2 text-left">
-        <thead className="text-xs uppercase tracking-[0.16em] text-[var(--ink-soft)]">
+        <thead className="text-xs uppercase tracking-[0.16em] text-ink-soft">
           <tr>
             <th className="px-4 py-2">Name</th>
             <th className="px-4 py-2">Email</th>
@@ -77,11 +77,11 @@ function TeacherList({
         <tbody>
           {teachers.map((teacher) => (
             <tr key={teacher.id} className="bg-[rgba(255,253,247,.68)]">
-              <td className="rounded-l-2xl px-4 py-3 font-semibold text-[var(--ink)]">
+              <td className="rounded-l-2xl px-4 py-3 font-semibold text-ink">
                 {teacher.firstName} {teacher.lastName}
               </td>
-              <td className="px-4 py-3 text-sm text-[var(--ink-soft)]">{teacher.email}</td>
-              <td className="px-4 py-3 text-sm text-[var(--ink-soft)]">
+              <td className="px-4 py-3 text-sm text-ink-soft">{teacher.email}</td>
+              <td className="px-4 py-3 text-sm text-ink-soft">
                 {teacher.phone ?? "—"}
               </td>
               <td className="rounded-r-2xl px-4 py-3">
@@ -173,15 +173,15 @@ function CreateTeacherForm({ onCreated }: CreateTeacherFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <h3 className="text-base font-bold text-[var(--ink)]">Add a teacher</h3>
+      <h3 className="text-base font-bold text-ink">Add a teacher</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {/* First Name */}
         <div>
           <label
             htmlFor="teacher-firstName"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
-            First Name <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+            First Name <span aria-hidden="true" className="text-danger">*</span>
           </label>
           <input
             ref={firstNameRef}
@@ -205,9 +205,9 @@ function CreateTeacherForm({ onCreated }: CreateTeacherFormProps) {
         <div>
           <label
             htmlFor="teacher-lastName"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
-            Last Name <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+            Last Name <span aria-hidden="true" className="text-danger">*</span>
           </label>
           <input
             ref={lastNameRef}
@@ -231,9 +231,9 @@ function CreateTeacherForm({ onCreated }: CreateTeacherFormProps) {
         <div>
           <label
             htmlFor="teacher-email"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
-            Email Address <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+            Email Address <span aria-hidden="true" className="text-danger">*</span>
           </label>
           <input
             ref={emailRef}
@@ -260,7 +260,7 @@ function CreateTeacherForm({ onCreated }: CreateTeacherFormProps) {
             className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
           >
             Phone{" "}
-            <span className="text-xs font-normal text-[var(--ink-soft)]">(optional)</span>
+            <span className="text-xs font-normal text-ink-soft">(optional)</span>
           </label>
           <input
             id="teacher-phone"
@@ -295,12 +295,26 @@ export function TeachersPanel() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  async function fetchTeachers() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const ITEMS_PER_PAGE = 50;
+
+  async function fetchTeachers(page = 1) {
     setLoading(true);
     setFetchError(null);
     try {
-      const data = await api<Teacher[]>("/staff?role=teacher");
-      setTeachers(Array.isArray(data) ? data : []);
+      const payload = await api<{ 
+        staff: Teacher[], 
+        total: number, 
+        page: number, 
+        totalPages: number 
+      }>(`/staff?role=teacher&page=${page}&limit=${ITEMS_PER_PAGE}`);
+      
+      setTeachers(Array.isArray(payload.staff) ? payload.staff : []);
+      setCurrentPage(payload.page || 1);
+      setTotalPages(payload.totalPages || 1);
+      setTotalItems(payload.total || 0);
     } catch (error) {
       setFetchError(
         error instanceof Error ? error.message : "Could not load teachers.",
@@ -311,8 +325,8 @@ export function TeachersPanel() {
   }
 
   useEffect(() => {
-    fetchTeachers();
-  }, []);
+    fetchTeachers(currentPage);
+  }, [currentPage]);
 
   function handleTeacherCreated(teacher: Teacher) {
     setTeachers((prev) => [teacher, ...prev]);
@@ -321,9 +335,9 @@ export function TeachersPanel() {
   if (fetchError) {
     return (
       <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <FiAlertCircle className="text-3xl text-[var(--danger)]" />
-        <p className="text-sm text-[var(--ink-soft)]">{fetchError}</p>
-        <Button variant="secondary" icon={FiRefreshCw} onClick={fetchTeachers}>
+        <FiAlertCircle className="text-3xl text-danger" />
+        <p className="text-sm text-ink-soft">{fetchError}</p>
+        <Button variant="secondary" icon={FiRefreshCw} onClick={() => fetchTeachers(1)}>
           Retry
         </Button>
       </div>
@@ -334,10 +348,20 @@ export function TeachersPanel() {
     <div>
       <CreateTeacherForm onCreated={handleTeacherCreated} />
       <div className="mt-6 border-t border-[rgba(83,97,87,.12)] pt-4">
-        <p className="text-sm font-semibold text-[var(--ink-soft)]">
-          {loading ? "Loading teachers…" : `${teachers.length} teacher${teachers.length === 1 ? "" : "s"}`}
+        <p className="text-sm font-semibold text-ink-soft">
+          {loading ? "Loading teachers…" : `${totalItems} teacher${totalItems === 1 ? "" : "s"}`}
         </p>
         <TeacherList teachers={teachers} loading={loading} />
+        
+        {!loading && teachers.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
     </div>
   );

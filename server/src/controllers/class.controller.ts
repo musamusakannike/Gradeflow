@@ -54,12 +54,30 @@ class ClassController {
   ): Promise<void> {
     try {
       const schoolId = req.user!.schoolId;
-      const classes = await Class.find({ schoolId })
-        .populate("classTeacher", "firstName lastName")
-        .populate("studentsCount")
-        .sort({ level: 1, name: 1 });
+      const { page, limit } = req.query;
 
-      sendSuccess(res, classes, "Classes retrieved successfully");
+      const pageNum = page ? parseInt(page as string) : 1;
+      const limitNum = limit ? parseInt(limit as string) : 50;
+      const skip = (pageNum - 1) * limitNum;
+
+      const query = { schoolId };
+
+      const [classes, total] = await Promise.all([
+        Class.find(query)
+          .populate("classTeacher", "firstName lastName")
+          .populate("studentsCount")
+          .sort({ level: 1, name: 1 })
+          .skip(skip)
+          .limit(limitNum),
+        Class.countDocuments(query)
+      ]);
+
+      sendSuccess(res, {
+        classes,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum)
+      }, "Classes retrieved successfully");
     } catch (error) {
       next(error);
     }

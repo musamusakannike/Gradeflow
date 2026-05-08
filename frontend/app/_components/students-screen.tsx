@@ -15,7 +15,7 @@ import {
 import { api } from "@/lib/api";
 import { validateStudentForm, validateTransferForm } from "@/lib/admin-forms";
 import type { SchoolClass } from "@/types/gradeflow";
-import { Button, EmptyState, InlineError, SectionHeader } from "./ui";
+import { Button, EmptyState, InlineError, SectionHeader, Pagination } from "./ui";
 
 // ---------------------------------------------------------------------------
 // Row type
@@ -129,16 +129,16 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
         className="surface w-full max-w-lg rounded-[28px] p-6 mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-black text-[var(--ink)]">Add a student</h2>
+        <h2 className="text-xl font-black text-ink">Add a student</h2>
         <form onSubmit={handleSubmit} noValidate className="mt-5 grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             {/* First Name */}
             <div>
               <label
                 htmlFor="add-firstName"
-                className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+                className="mb-1.5 block text-sm font-semibold text-ink"
               >
-                First Name <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+                First Name <span aria-hidden="true" className="text-danger">*</span>
               </label>
               <input
                 id="add-firstName"
@@ -157,9 +157,9 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
             <div>
               <label
                 htmlFor="add-lastName"
-                className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+                className="mb-1.5 block text-sm font-semibold text-ink"
               >
-                Last Name <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+                Last Name <span aria-hidden="true" className="text-danger">*</span>
               </label>
               <input
                 id="add-lastName"
@@ -179,10 +179,10 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
           <div>
             <label
               htmlFor="add-email"
-              className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+              className="mb-1.5 block text-sm font-semibold text-ink"
             >
               Email{" "}
-              <span className="text-xs font-normal text-[var(--ink-soft)]">(optional)</span>
+              <span className="text-xs font-normal text-ink-soft">(optional)</span>
             </label>
             <input
               id="add-email"
@@ -199,9 +199,9 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
             <div>
               <label
                 htmlFor="add-gender"
-                className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+                className="mb-1.5 block text-sm font-semibold text-ink"
               >
-                Gender <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+                Gender <span aria-hidden="true" className="text-danger">*</span>
               </label>
               <select
                 id="add-gender"
@@ -224,9 +224,9 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
             <div>
               <label
                 htmlFor="add-classId"
-                className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+                className="mb-1.5 block text-sm font-semibold text-ink"
               >
-                Class <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+                Class <span aria-hidden="true" className="text-danger">*</span>
               </label>
               <select
                 id="add-classId"
@@ -252,9 +252,9 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
           <div>
             <label
               htmlFor="add-guardianName"
-              className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+              className="mb-1.5 block text-sm font-semibold text-ink"
             >
-              Guardian Name <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+              Guardian Name <span aria-hidden="true" className="text-danger">*</span>
             </label>
             <input
               id="add-guardianName"
@@ -274,9 +274,9 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
             <div>
               <label
                 htmlFor="add-guardianPhone"
-                className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+                className="mb-1.5 block text-sm font-semibold text-ink"
               >
-                Guardian Phone <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+                Guardian Phone <span aria-hidden="true" className="text-danger">*</span>
               </label>
               <input
                 id="add-guardianPhone"
@@ -295,10 +295,10 @@ function AddStudentModal({ onClose, onCreated }: AddStudentModalProps) {
             <div>
               <label
                 htmlFor="add-guardianEmail"
-                className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+                className="mb-1.5 block text-sm font-semibold text-ink"
               >
                 Guardian Email{" "}
-                <span className="text-xs font-normal text-[var(--ink-soft)]">(optional)</span>
+                <span className="text-xs font-normal text-ink-soft">(optional)</span>
               </label>
               <input
                 id="add-guardianEmail"
@@ -381,17 +381,17 @@ function TransferModal({ student, onClose, onTransferred }: TransferModalProps) 
         className="surface w-full max-w-lg rounded-[28px] p-6 mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-black text-[var(--ink)]">Transfer {student.name}</h2>
-        <p className="mt-1 text-sm text-[var(--ink-soft)]">
+        <h2 className="text-xl font-black text-ink">Transfer {student.name}</h2>
+        <p className="mt-1 text-sm text-ink-soft">
           Current class: <span className="font-semibold">{student.className}</span>
         </p>
 
         <div className="mt-5">
           <label
             htmlFor="transfer-classId"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
-            New Class <span aria-hidden="true" className="text-[var(--danger)]">*</span>
+            New Class <span aria-hidden="true" className="text-danger">*</span>
           </label>
           <select
             id="transfer-classId"
@@ -477,17 +477,17 @@ function StatusModal({ student, onClose, onUpdated }: StatusModalProps) {
         className="surface w-full max-w-lg rounded-[28px] p-6 mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-black text-[var(--ink)]">
+        <h2 className="text-xl font-black text-ink">
           Update status for {student.name}
         </h2>
-        <p className="mt-1 text-sm text-[var(--ink-soft)]">
+        <p className="mt-1 text-sm text-ink-soft">
           Current status: <span className="font-semibold capitalize">{student.status}</span>
         </p>
 
         <div className="mt-5">
           <label
             htmlFor="status-select"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             New Status
           </label>
@@ -534,6 +534,11 @@ export function StudentsScreen() {
   const [transferStudent, setTransferStudent] = useState<StudentRow | null>(null);
   const [statusStudent, setStatusStudent] = useState<StudentRow | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const ITEMS_PER_PAGE = 50;
+
   const rows = useMemo(
     () =>
       liveRows.filter((student) =>
@@ -544,11 +549,17 @@ export function StudentsScreen() {
     [liveRows, query],
   );
 
-  const fetchStudents = useCallback(async () => {
+  const fetchStudents = useCallback(async (page = 1) => {
     setLoading(true);
     setFetchError(null);
     try {
-      const payload = await api<{ students: any[] }>("/students");
+      const payload = await api<{ 
+        students: any[], 
+        total: number, 
+        page: number, 
+        totalPages: number 
+      }>(`/students?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      
       if (!Array.isArray(payload.students)) {
         setLiveRows([]);
         return;
@@ -564,6 +575,9 @@ export function StudentsScreen() {
           average: 0,
         })),
       );
+      setCurrentPage(payload.page || 1);
+      setTotalPages(payload.totalPages || 1);
+      setTotalItems(payload.total || 0);
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : "Could not load students.");
     } finally {
@@ -572,8 +586,8 @@ export function StudentsScreen() {
   }, []);
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    fetchStudents(currentPage);
+  }, [fetchStudents, currentPage]);
 
   async function linkParent(id: string) {
     try {
@@ -613,9 +627,9 @@ export function StudentsScreen() {
           copy="Create students, link parents, transfer classes, and keep status changes visible."
         />
         <div className="flex flex-col items-center gap-4 py-8 text-center">
-          <FiAlertCircle className="text-3xl text-[var(--danger)]" />
-          <p className="text-sm text-[var(--ink-soft)]">{fetchError}</p>
-          <Button variant="secondary" icon={FiRefreshCw} onClick={fetchStudents}>
+          <FiAlertCircle className="text-3xl text-danger" />
+          <p className="text-sm text-ink-soft">{fetchError}</p>
+          <Button variant="secondary" icon={FiRefreshCw} onClick={() => fetchStudents(1)}>
             Retry
           </Button>
         </div>
@@ -639,7 +653,7 @@ export function StudentsScreen() {
 
       <div className="surface rounded-[28px] p-4">
         <div className="relative">
-          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]" />
+          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -663,7 +677,7 @@ export function StudentsScreen() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-separate border-spacing-y-2 text-left">
-                <thead className="text-xs uppercase tracking-[0.16em] text-[var(--ink-soft)]">
+                <thead className="text-xs uppercase tracking-[0.16em] text-ink-soft">
                   <tr>
                     <th className="px-4 py-2">Student</th>
                     <th className="px-4 py-2">Class</th>
@@ -678,7 +692,7 @@ export function StudentsScreen() {
                     <tr key={student.id} className="bg-[rgba(255,253,247,.68)]">
                       <td className="rounded-l-2xl px-4 py-4">
                         <p className="font-black">{student.name}</p>
-                        <p className="text-sm text-[var(--ink-soft)]">{student.studentId}</p>
+                        <p className="text-sm text-ink-soft">{student.studentId}</p>
                       </td>
                       <td className="px-4 py-4 font-bold">{student.className}</td>
                       <td className="px-4 py-4 capitalize">{student.status}</td>
@@ -715,6 +729,16 @@ export function StudentsScreen() {
             </div>
           )}
         </div>
+
+        {!loading && liveRows.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
 
       {/* Modals */}

@@ -40,11 +40,14 @@ export function ResultsScreen() {
       api<AcademicTerm[]>("/academic/terms"),
       api<{ students: Array<{ _id: string; studentId: string; user?: { firstName?: string; lastName?: string } }> }>("/students"),
     ])
-      .then(([classesData, termsData, studentsData]) => {
-        setClasses(classesData);
-        setTerms(termsData);
+      .then(([classesPayload, termsData, studentsPayload]) => {
+        const classesList = (classesPayload as any).classes || classesPayload;
+        const studentsList = (studentsPayload as any).students || studentsPayload;
+        
+        setClasses(Array.isArray(classesList) ? classesList : []);
+        setTerms(Array.isArray(termsData) ? termsData : []);
         setStudents(
-          studentsData.students.map((s) => ({
+          (Array.isArray(studentsList) ? studentsList : []).map((s: any) => ({
             _id: s._id,
             studentId: s.studentId,
             displayName: `${s.user?.firstName || ""} ${s.user?.lastName || ""} (${s.studentId})`.trim(),

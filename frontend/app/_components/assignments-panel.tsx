@@ -13,7 +13,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { validateAssignmentForm } from "@/lib/admin-forms";
 import type { Assignment, SchoolClass, Subject, Teacher } from "@/types/gradeflow";
-import { Button, EmptyState, InlineError } from "./ui";
+import { Button, EmptyState, InlineError, Pagination } from "./ui";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,7 +48,7 @@ function CheckboxList({
 }: CheckboxListProps) {
   if (items.length === 0) {
     return (
-      <p className="text-sm text-[var(--ink-soft)] italic">
+      <p className="text-sm text-ink-soft italic">
         {emptyMessage ?? "No items available."}
       </p>
     );
@@ -88,11 +88,11 @@ function CheckboxList({
                 disabled={disabled}
               />
               {checked ? (
-                <FiCheckSquare className="shrink-0 text-base text-[var(--moss)]" />
+                <FiCheckSquare className="shrink-0 text-base text-moss" />
               ) : (
-                <FiSquare className="shrink-0 text-base text-[var(--ink-soft)]" />
+                <FiSquare className="shrink-0 text-base text-ink-soft" />
               )}
-              <span className={checked ? "font-semibold text-[var(--ink)]" : "text-[var(--ink-soft)]"}>
+              <span className={checked ? "font-semibold text-ink" : "text-ink-soft"}>
                 {item.label}
               </span>
             </label>
@@ -151,7 +151,7 @@ function AssignmentList({
   return (
     <div className="mt-4 overflow-x-auto">
       <table className="w-full min-w-[560px] border-separate border-spacing-y-2 text-left">
-        <thead className="text-xs uppercase tracking-[0.16em] text-[var(--ink-soft)]">
+        <thead className="text-xs uppercase tracking-[0.16em] text-ink-soft">
           <tr>
             <th className="px-4 py-2">Teacher</th>
             <th className="px-4 py-2">Class</th>
@@ -173,13 +173,13 @@ function AssignmentList({
                 key={assignment.id}
                 className={`bg-[rgba(255,253,247,.68)] transition-opacity ${isRemoving ? "opacity-50" : ""}`}
               >
-                <td className="rounded-l-2xl px-4 py-3 font-semibold text-[var(--ink)]">
+                <td className="rounded-l-2xl px-4 py-3 font-semibold text-ink">
                   {teacherName}
                 </td>
-                <td className="px-4 py-3 text-sm text-[var(--ink-soft)]">
+                <td className="px-4 py-3 text-sm text-ink-soft">
                   {className}
                 </td>
-                <td className="px-4 py-3 text-sm text-[var(--ink-soft)]">
+                <td className="px-4 py-3 text-sm text-ink-soft">
                   {subjectName}
                 </td>
                 <td className="rounded-r-2xl px-4 py-3 text-right">
@@ -351,7 +351,7 @@ function CreateAssignmentForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <h3 className="text-base font-bold text-[var(--ink)]">
+      <h3 className="text-base font-bold text-ink">
         Create an assignment
       </h3>
 
@@ -359,7 +359,7 @@ function CreateAssignmentForm({
       {!currentSessionId && (
         <div
           role="alert"
-          className="mt-3 flex items-start gap-2 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3 text-sm text-[var(--danger)]"
+          className="mt-3 flex items-start gap-2 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3 text-sm text-danger"
         >
           <FiAlertCircle className="mt-0.5 shrink-0 text-base" />
           No active academic session found. Please create a current session
@@ -371,7 +371,7 @@ function CreateAssignmentForm({
       {formError.assignment && (
         <div
           role="alert"
-          className="mt-3 flex items-start gap-2 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3 text-sm text-[var(--danger)]"
+          className="mt-3 flex items-start gap-2 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3 text-sm text-danger"
         >
           <FiAlertCircle className="mt-0.5 shrink-0 text-base" />
           {formError.assignment}
@@ -383,10 +383,10 @@ function CreateAssignmentForm({
         <div>
           <label
             htmlFor="assignment-class"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             Class{" "}
-            <span aria-hidden="true" className="text-[var(--danger)]">
+            <span aria-hidden="true" className="text-danger">
               *
             </span>
           </label>
@@ -420,10 +420,10 @@ function CreateAssignmentForm({
         <div>
           <p
             id="assignment-teachers-label"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             Teacher(s){" "}
-            <span aria-hidden="true" className="text-[var(--danger)]">
+            <span aria-hidden="true" className="text-danger">
               *
             </span>
           </p>
@@ -450,15 +450,15 @@ function CreateAssignmentForm({
         <div>
           <p
             id="assignment-subjects-label"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             Subject(s){" "}
-            <span aria-hidden="true" className="text-[var(--danger)]">
+            <span aria-hidden="true" className="text-danger">
               *
             </span>
           </p>
           {!selectedClassId ? (
-            <p className="text-sm text-[var(--ink-soft)] italic">
+            <p className="text-sm text-ink-soft italic">
               Select a class first.
             </p>
           ) : (
@@ -516,13 +516,23 @@ export function AssignmentsPanel() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  async function fetchAll() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const ITEMS_PER_PAGE = 50;
+
+  async function fetchAll(page = 1) {
     setLoading(true);
     setFetchError(null);
     try {
-      const [assignmentsData, teachersData, classesData, subjectsData, sessionsData] =
+      const [assignmentsPayload, teachersData, classesData, subjectsData, sessionsData] =
         await Promise.all([
-          api<Assignment[]>("/subjects/assignments"),
+          api<{ 
+            assignments: Assignment[], 
+            total: number, 
+            page: number, 
+            totalPages: number 
+          }>(`/subjects/assignments?page=${page}&limit=${ITEMS_PER_PAGE}`),
           api<Teacher[]>("/staff?role=teacher"),
           api<SchoolClass[]>("/classes"),
           api<Subject[]>("/subjects"),
@@ -531,10 +541,27 @@ export function AssignmentsPanel() {
           ),
         ]);
 
-      setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
+      setAssignments(Array.isArray(assignmentsPayload.assignments) ? assignmentsPayload.assignments : []);
+      setCurrentPage(assignmentsPayload.page || 1);
+      setTotalPages(assignmentsPayload.totalPages || 1);
+      setTotalItems(assignmentsPayload.total || 0);
+      
       setTeachers(Array.isArray(teachersData) ? teachersData : []);
-      setClasses(Array.isArray(classesData) ? classesData : []);
-      setSubjects(Array.isArray(subjectsData) ? subjectsData : []);
+      // Handle potential pagination in other calls if needed, but for dropdowns we usually want all.
+      // Note: teachers/classes/subjects might also return paginated data now.
+      // If they do, we should handle them differently for dropdowns (maybe a search input).
+      // But for now let's assume dropdowns still get all or we need to fix those too.
+      
+      // Fix: teachers, classes, subjects now return paginated objects!
+      // I need to extract the arrays from them.
+      
+      const teachersList = (teachersData as any).staff || teachersData;
+      const classesList = (classesData as any).classes || classesData;
+      const subjectsList = (subjectsData as any).subjects || subjectsData;
+
+      setTeachers(Array.isArray(teachersList) ? teachersList : []);
+      setClasses(Array.isArray(classesList) ? classesList : []);
+      setSubjects(Array.isArray(subjectsList) ? subjectsList : []);
 
       // Extract current session ID
       const sessions = Array.isArray(sessionsData) ? sessionsData : [];
@@ -552,8 +579,8 @@ export function AssignmentsPanel() {
   }
 
   useEffect(() => {
-    fetchAll();
-  }, []);
+    fetchAll(currentPage);
+  }, [currentPage]);
 
   function handleAssignmentsCreated(newAssignments: Assignment[]) {
     setAssignments((prev) => [...newAssignments, ...prev]);
@@ -590,9 +617,9 @@ export function AssignmentsPanel() {
   if (fetchError) {
     return (
       <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <FiAlertCircle className="text-3xl text-[var(--danger)]" />
-        <p className="text-sm text-[var(--ink-soft)]">{fetchError}</p>
-        <Button variant="secondary" icon={FiRefreshCw} onClick={fetchAll}>
+        <FiAlertCircle className="text-3xl text-danger" />
+        <p className="text-sm text-ink-soft">{fetchError}</p>
+        <Button variant="secondary" icon={FiRefreshCw} onClick={() => fetchAll(1)}>
           Retry
         </Button>
       </div>
@@ -609,10 +636,10 @@ export function AssignmentsPanel() {
         onCreated={handleAssignmentsCreated}
       />
       <div className="mt-6 border-t border-[rgba(83,97,87,.12)] pt-4">
-        <p className="text-sm font-semibold text-[var(--ink-soft)]">
+        <p className="text-sm font-semibold text-ink-soft">
           {loading
             ? "Loading assignments…"
-            : `${assignments.length} assignment${assignments.length === 1 ? "" : "s"}`}
+            : `${totalItems} assignment${totalItems === 1 ? "" : "s"}`}
         </p>
         <AssignmentList
           assignments={assignments}
@@ -620,6 +647,16 @@ export function AssignmentsPanel() {
           removingId={removingId}
           onRemove={handleRemove}
         />
+
+        {!loading && assignments.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
     </div>
   );

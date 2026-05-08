@@ -13,7 +13,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { validateClassForm, validateSubjectForm } from "@/lib/admin-forms";
 import type { SchoolClass, Subject } from "@/types/gradeflow";
-import { Button, EmptyState, InlineError } from "./ui";
+import { Button, EmptyState, InlineError, Pagination } from "./ui";
 
 // ---------------------------------------------------------------------------
 // ClassSubjectView — shown when a class is selected
@@ -167,19 +167,19 @@ function ClassSubjectView({ selectedClass, onClose }: ClassSubjectViewProps) {
           type="button"
           onClick={onClose}
           aria-label="Back to class list"
-          className="focus-ring pressable grid size-8 place-items-center rounded-xl text-[var(--ink-soft)] hover:bg-[rgba(49,92,67,.08)]"
+          className="focus-ring pressable grid size-8 place-items-center rounded-xl text-ink-soft hover:bg-[rgba(49,92,67,.08)]"
         >
           <FiArrowLeft className="text-base" />
         </button>
-        <h3 className="text-base font-bold text-[var(--ink)]">
+        <h3 className="text-base font-bold text-ink">
           Subjects for{" "}
-          <span className="text-[var(--moss)]">{selectedClass.name}</span>
+          <span className="text-moss">{selectedClass.name}</span>
         </h3>
       </div>
 
       {/* Create Subject Form */}
       <form onSubmit={handleSubmit} noValidate>
-        <h4 className="text-sm font-semibold text-[var(--ink-soft)]">
+        <h4 className="text-sm font-semibold text-ink-soft">
           Add a subject
         </h4>
 
@@ -189,7 +189,7 @@ function ClassSubjectView({ selectedClass, onClose }: ClassSubjectViewProps) {
             role="alert"
             className="mt-3 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3"
           >
-            <p className="flex items-start gap-2 text-sm text-[var(--danger)]">
+            <p className="flex items-start gap-2 text-sm text-danger">
               <FiAlertCircle className="mt-0.5 shrink-0 text-base" />
               {formError.form}
             </p>
@@ -216,10 +216,10 @@ function ClassSubjectView({ selectedClass, onClose }: ClassSubjectViewProps) {
           <div>
             <label
               htmlFor="subject-name"
-              className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+              className="mb-1.5 block text-sm font-semibold text-ink"
             >
               Subject Name{" "}
-              <span aria-hidden="true" className="text-[var(--danger)]">
+              <span aria-hidden="true" className="text-danger">
                 *
               </span>
             </label>
@@ -249,10 +249,10 @@ function ClassSubjectView({ selectedClass, onClose }: ClassSubjectViewProps) {
           <div>
             <label
               htmlFor="subject-description"
-              className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+              className="mb-1.5 block text-sm font-semibold text-ink"
             >
               Description{" "}
-              <span className="text-xs font-normal text-[var(--ink-soft)]">
+              <span className="text-xs font-normal text-ink-soft">
                 (optional)
               </span>
             </label>
@@ -281,7 +281,7 @@ function ClassSubjectView({ selectedClass, onClose }: ClassSubjectViewProps) {
 
       {/* Subject List */}
       <div className="mt-5 border-t border-[rgba(83,97,87,.12)] pt-4">
-        <p className="text-sm font-semibold text-[var(--ink-soft)]">
+        <p className="text-sm font-semibold text-ink-soft">
           {loading
             ? "Loading subjects…"
             : `${subjects.length} subject${subjects.length === 1 ? "" : "s"}`}
@@ -289,8 +289,8 @@ function ClassSubjectView({ selectedClass, onClose }: ClassSubjectViewProps) {
 
         {fetchError ? (
           <div className="mt-4 flex flex-col items-center gap-4 py-6 text-center">
-            <FiAlertCircle className="text-2xl text-[var(--danger)]" />
-            <p className="text-sm text-[var(--ink-soft)]">{fetchError}</p>
+            <FiAlertCircle className="text-2xl text-danger" />
+            <p className="text-sm text-ink-soft">{fetchError}</p>
             <Button variant="secondary" icon={FiRefreshCw} onClick={fetchSubjects}>
               Retry
             </Button>
@@ -322,15 +322,15 @@ function ClassSubjectView({ selectedClass, onClose }: ClassSubjectViewProps) {
                 key={subject.id}
                 className="flex items-start gap-3 rounded-2xl bg-[rgba(255,253,247,.68)] px-4 py-3"
               >
-                <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-[rgba(49,92,67,.1)] text-[var(--moss)]">
+                <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-[rgba(49,92,67,.1)] text-moss">
                   <FiBook className="text-sm" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[var(--ink)]">
+                  <p className="font-semibold text-ink">
                     {subject.name}
                   </p>
                   {subject.description && (
-                    <p className="mt-0.5 text-sm text-[var(--ink-soft)]">
+                    <p className="mt-0.5 text-sm text-ink-soft">
                       {subject.description}
                     </p>
                   )}
@@ -407,15 +407,15 @@ function ClassList({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[var(--ink)]">{cls.name}</p>
-                  <p className="mt-0.5 text-xs text-[var(--ink-soft)]">
+                  <p className="font-semibold text-ink">{cls.name}</p>
+                  <p className="mt-0.5 text-xs text-ink-soft">
                     Level {cls.level}
                     {cls.section ? ` · Section ${cls.section}` : ""}
                     {cls.capacity ? ` · Capacity ${cls.capacity}` : ""}
                   </p>
                 </div>
                 {isSelected && (
-                  <span className="shrink-0 rounded-full bg-[rgba(49,92,67,.15)] px-2.5 py-0.5 text-xs font-semibold text-[var(--moss)]">
+                  <span className="shrink-0 rounded-full bg-[rgba(49,92,67,.15)] px-2.5 py-0.5 text-xs font-semibold text-moss">
                     Selected
                   </span>
                 )}
@@ -512,13 +512,13 @@ function CreateClassForm({ onCreated }: CreateClassFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <h3 className="text-base font-bold text-[var(--ink)]">Add a class</h3>
+      <h3 className="text-base font-bold text-ink">Add a class</h3>
 
       {/* Form-level error (409 duplicate) */}
       {formError.form && (
         <div
           role="alert"
-          className="mt-3 flex items-start gap-2 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3 text-sm text-[var(--danger)]"
+          className="mt-3 flex items-start gap-2 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3 text-sm text-danger"
         >
           <FiAlertCircle className="mt-0.5 shrink-0 text-base" />
           {formError.form}
@@ -530,10 +530,10 @@ function CreateClassForm({ onCreated }: CreateClassFormProps) {
         <div>
           <label
             htmlFor="class-name"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             Class Name{" "}
-            <span aria-hidden="true" className="text-[var(--danger)]">
+            <span aria-hidden="true" className="text-danger">
               *
             </span>
           </label>
@@ -560,10 +560,10 @@ function CreateClassForm({ onCreated }: CreateClassFormProps) {
         <div>
           <label
             htmlFor="class-level"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             Level (1–12){" "}
-            <span aria-hidden="true" className="text-[var(--danger)]">
+            <span aria-hidden="true" className="text-danger">
               *
             </span>
           </label>
@@ -593,10 +593,10 @@ function CreateClassForm({ onCreated }: CreateClassFormProps) {
         <div>
           <label
             htmlFor="class-section"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             Section{" "}
-            <span className="text-xs font-normal text-[var(--ink-soft)]">
+            <span className="text-xs font-normal text-ink-soft">
               (optional)
             </span>
           </label>
@@ -616,10 +616,10 @@ function CreateClassForm({ onCreated }: CreateClassFormProps) {
         <div>
           <label
             htmlFor="class-capacity"
-            className="mb-1.5 block text-sm font-semibold text-[var(--ink)]"
+            className="mb-1.5 block text-sm font-semibold text-ink"
           >
             Capacity{" "}
-            <span className="text-xs font-normal text-[var(--ink-soft)]">
+            <span className="text-xs font-normal text-ink-soft">
               (optional)
             </span>
           </label>
@@ -656,12 +656,26 @@ export function ClassesPanel() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  async function fetchClasses() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const ITEMS_PER_PAGE = 50;
+
+  async function fetchClasses(page = 1) {
     setLoading(true);
     setFetchError(null);
     try {
-      const data = await api<SchoolClass[]>("/classes");
-      setClasses(Array.isArray(data) ? data : []);
+      const payload = await api<{ 
+        classes: SchoolClass[], 
+        total: number, 
+        page: number, 
+        totalPages: number 
+      }>(`/classes?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      
+      setClasses(Array.isArray(payload.classes) ? payload.classes : []);
+      setCurrentPage(payload.page || 1);
+      setTotalPages(payload.totalPages || 1);
+      setTotalItems(payload.total || 0);
     } catch (error) {
       setFetchError(
         error instanceof Error ? error.message : "Could not load classes.",
@@ -672,8 +686,8 @@ export function ClassesPanel() {
   }
 
   useEffect(() => {
-    fetchClasses();
-  }, []);
+    fetchClasses(currentPage);
+  }, [currentPage]);
 
   function handleClassCreated(cls: SchoolClass) {
     setClasses((prev) => [cls, ...prev]);
@@ -682,9 +696,9 @@ export function ClassesPanel() {
   if (fetchError) {
     return (
       <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <FiAlertCircle className="text-3xl text-[var(--danger)]" />
-        <p className="text-sm text-[var(--ink-soft)]">{fetchError}</p>
-        <Button variant="secondary" icon={FiRefreshCw} onClick={fetchClasses}>
+        <FiAlertCircle className="text-3xl text-danger" />
+        <p className="text-sm text-ink-soft">{fetchError}</p>
+        <Button variant="secondary" icon={FiRefreshCw} onClick={() => fetchClasses(1)}>
           Retry
         </Button>
       </div>
@@ -696,10 +710,10 @@ export function ClassesPanel() {
       <CreateClassForm onCreated={handleClassCreated} />
 
       <div className="mt-6 border-t border-[rgba(83,97,87,.12)] pt-4">
-        <p className="text-sm font-semibold text-[var(--ink-soft)]">
+        <p className="text-sm font-semibold text-ink-soft">
           {loading
             ? "Loading classes…"
-            : `${classes.length} class${classes.length === 1 ? "" : "es"}`}
+            : `${totalItems} class${totalItems === 1 ? "" : "es"}`}
         </p>
         <ClassList
           classes={classes}
@@ -711,6 +725,16 @@ export function ClassesPanel() {
             )
           }
         />
+
+        {!loading && classes.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
 
       {selectedClass && (

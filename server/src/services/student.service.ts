@@ -220,7 +220,7 @@ class StudentService {
     page: number;
     totalPages: number;
   }> {
-    const { page = 1, limit = 20, status, classId, search } = options;
+    const { page = 1, limit = 50, status, classId, search } = options;
     const skip = (page - 1) * limit;
 
     const query: Record<string, unknown> = { schoolId: schoolId };

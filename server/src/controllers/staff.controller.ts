@@ -42,7 +42,11 @@ class StaffController {
   ): Promise<void> {
     try {
       const schoolId = req.user!.schoolId!;
-      const { role } = req.query;
+      const { role, page, limit } = req.query;
+
+      const pageNum = page ? parseInt(page as string) : 1;
+      const limitNum = limit ? parseInt(limit as string) : 50;
+      const skip = (pageNum - 1) * limitNum;
 
       const query: any = { 
         schoolId, 
@@ -53,11 +57,21 @@ class StaffController {
         query.role = role;
       }
 
-      const staff = await User.find(query)
-        .select("-password")
-        .sort({ firstName: 1, lastName: 1 });
+      const [staff, total] = await Promise.all([
+        User.find(query)
+          .select("-password")
+          .sort({ firstName: 1, lastName: 1 })
+          .skip(skip)
+          .limit(limitNum),
+        User.countDocuments(query)
+      ]);
 
-      sendSuccess(res, staff, "Staff members retrieved successfully");
+      sendSuccess(res, {
+        staff,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum)
+      }, "Staff members retrieved successfully");
     } catch (error) {
       next(error);
     }
