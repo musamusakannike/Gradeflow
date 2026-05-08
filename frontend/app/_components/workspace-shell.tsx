@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  FiAward,
   FiBarChart2,
   FiBookOpen,
   FiCreditCard,
+  FiEdit2,
   FiGrid,
   FiLogOut,
   FiMenu,
@@ -16,7 +18,9 @@ import {
   FiX,
 } from "react-icons/fi";
 import clsx from "clsx";
+import toast from "react-hot-toast";
 import { tokenStore, userStore } from "@/lib/api";
+import type { Role } from "@/types/gradeflow";
 import { tap } from "@/lib/haptics";
 import { Button } from "./ui";
 
@@ -27,7 +31,29 @@ const nav = [
   { href: "/results", label: "Results", icon: FiBarChart2 },
   { href: "/finance", label: "Finance", icon: FiCreditCard },
   { href: "/settings", label: "Settings", icon: FiSettings },
+  { href: "/score-entry", label: "Score Entry", icon: FiEdit2 },
+  { href: "/my-results", label: "My Results", icon: FiAward },
+  { href: "/my-children", label: "My Children", icon: FiUsers },
+  { href: "/broadsheet", label: "Broadsheet", icon: FiGrid },
 ];
+
+const NAV_BY_ROLE: Record<Role, string[]> = {
+  school_admin: ["/dashboard", "/students", "/academics", "/results", "/finance", "/settings", "/broadsheet"],
+  teacher: ["/score-entry", "/results", "/broadsheet"],
+  bursar: ["/dashboard", "/finance"],
+  student: ["/my-results"],
+  parent: ["/my-children"],
+  super_admin: ["/dashboard", "/students", "/academics", "/results", "/finance", "/settings", "/broadsheet"],
+};
+
+const DEFAULT_ROUTE: Record<Role, string> = {
+  school_admin: "/dashboard",
+  teacher: "/score-entry",
+  bursar: "/finance",
+  student: "/my-results",
+  parent: "/my-children",
+  super_admin: "/dashboard",
+};
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,8 +62,31 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState(userStore.get());
 
   useEffect(() => {
-    setUser(userStore.get());
-  }, []);
+    const currentUser = userStore.get();
+    const token = tokenStore.get();
+    setUser(currentUser);
+
+    if (!currentUser || !token) {
+      router.push("/login");
+      return;
+    }
+
+    const role = currentUser.role as Role;
+
+    if (!(role in DEFAULT_ROUTE)) {
+      tokenStore.clear();
+      router.push("/login");
+      toast.error("Your account role is not recognized. Please contact your administrator.");
+      return;
+    }
+
+    const allowedHrefs = NAV_BY_ROLE[role];
+    const isAllowed = allowedHrefs.some((href) => pathname.startsWith(href));
+
+    if (!isAllowed) {
+      router.push(DEFAULT_ROUTE[role]);
+    }
+  }, [pathname, router]);
 
   function logout() {
     tap();
@@ -60,8 +109,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       </Link>
 
       <nav className="mt-8 grid gap-1">
-        {nav.map((item) => {
-          const active = pathname === item.href;
+        {(user ? nav.filter((item) => NAV_BY_ROLE[user.role]?.includes(item.href)) : []).map((item) => {
+          const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
