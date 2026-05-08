@@ -353,3 +353,59 @@ export function filterStudents(
       row.className.toLowerCase().includes(q),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Score entry form
+// ---------------------------------------------------------------------------
+
+export function validateScoreForm(data: {
+  test1?: number | string;
+  test2?: number | string;
+  exam?: number | string;
+}): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (data.test1 !== undefined && data.test1 !== "") {
+    const test1 = Number(data.test1);
+    if (!Number.isFinite(test1) || test1 < 0 || test1 > 20) {
+      errors.test1 = "Test 1 must be between 0 and 20";
+    }
+  }
+
+  if (data.test2 !== undefined && data.test2 !== "") {
+    const test2 = Number(data.test2);
+    if (!Number.isFinite(test2) || test2 < 0 || test2 > 20) {
+      errors.test2 = "Test 2 must be between 0 and 20";
+    }
+  }
+
+  if (data.exam !== undefined && data.exam !== "") {
+    const exam = Number(data.exam);
+    if (!Number.isFinite(exam) || exam < 0 || exam > 60) {
+      errors.exam = "Exam must be between 0 and 60";
+    }
+  }
+
+  return errors;
+}
+
+// ---------------------------------------------------------------------------
+// Score entry selection form
+// ---------------------------------------------------------------------------
+
+export function validateScoreSelectionForm(data: {
+  classSubjectId?: string;
+  termId?: string;
+}): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (!data.classSubjectId || data.classSubjectId.trim() === "") {
+    errors.classSubjectId = "Please select a subject";
+  }
+
+  if (!data.termId || data.termId.trim() === "") {
+    errors.termId = "Please select a term";
+  }
+
+  return errors;
+}

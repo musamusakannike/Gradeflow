@@ -132,3 +132,82 @@ export interface Assignment {
   subject?: { name: string; code: string };
   teacher?: { firstName: string; lastName: string };
 }
+
+export interface ClassSubjectOption {
+  _id: string;
+  classId: string | { _id: string; name: string };
+  subjectId: string | { _id: string; name: string; code: string };
+  teacherId: string | { _id: string; firstName: string; lastName: string };
+  sessionId: string;
+  class?: { _id: string; name: string };
+  subject?: { _id: string; name: string; code: string };
+  teacher?: { _id: string; firstName: string; lastName: string };
+  displayLabel?: string;
+}
+
+export interface ScoreRow {
+  studentId: string;
+  studentName: string;
+  studentCode: string;
+  test1: number;
+  test2: number;
+  exam: number;
+  total?: number;
+  grade?: string;
+  remark?: string;
+}
+
+export interface ResultSummaryFull {
+  student: {
+    id: string;
+    name: string;
+    studentId: string;
+  };
+  term: {
+    id: string;
+    name: string;
+  };
+  class: {
+    id: string;
+    name: string;
+  };
+  subjects: ResultSubject[];
+  summary: {
+    totalSubjects: number;
+    totalScore: number;
+    averageScore: number;
+    position?: number;
+    classSize?: number;
+  };
+}
+
+export interface ClassAnalytics {
+  totals: {
+    totalScores: number;
+    averageScore: number;
+    highestScore: number;
+    lowestScore: number;
+    passCount: number;
+    failCount: number;
+    passRate: number;
+  };
+  bySubject: Array<{
+    subject: string;
+    code: string;
+    totalScores: number;
+    averageScore: number;
+    highestScore: number;
+    lowestScore: number;
+    passRate: number;
+  }>;
+}
+
+export interface ClassBroadsheet {
+  results: ResultSummaryFull[];
+  classStats: {
+    totalStudents: number;
+    highestAverage: number;
+    lowestAverage: number;
+    classAverage: number;
+  };
+}
