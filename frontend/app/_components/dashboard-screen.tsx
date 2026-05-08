@@ -5,17 +5,22 @@ import toast from "react-hot-toast";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { FiBookOpen, FiCreditCard, FiFileText, FiUsers } from "react-icons/fi";
 import { api } from "@/lib/api";
-import { classPerformance } from "@/lib/demo-data";
 import { DashboardSummary } from "@/types/gradeflow";
 import { SectionHeader, StatCard } from "./ui";
+
+type ClassPerformancePoint = { name: string; average: number; paid: number };
 
 export function DashboardScreen() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [classPerformanceData, setClassPerformanceData] = useState<ClassPerformancePoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+
+    // Fetch main dashboard summary
     api<DashboardSummary>("/dashboard")
       .then((data) => {
         setSummary(data);
@@ -24,6 +29,26 @@ export function DashboardScreen() {
       .catch((error) => {
         toast.error(error instanceof Error ? error.message : "Could not load dashboard data");
         setLoading(false);
+      });
+
+    // Fetch class performance chart data — try /dashboard/class-performance first,
+    // fall back to /results/class-performance, then gracefully degrade to empty state.
+    api<ClassPerformancePoint[]>("/dashboard/class-performance")
+      .then((data) => {
+        setClassPerformanceData(Array.isArray(data) ? data : []);
+        setChartLoading(false);
+      })
+      .catch(() => {
+        api<ClassPerformancePoint[]>("/results/class-performance")
+          .then((data) => {
+            setClassPerformanceData(Array.isArray(data) ? data : []);
+            setChartLoading(false);
+          })
+          .catch(() => {
+            // Both endpoints failed — show empty state, don't break the dashboard
+            setClassPerformanceData([]);
+            setChartLoading(false);
+          });
       });
   }, []);
 
@@ -100,9 +125,15 @@ export function DashboardScreen() {
             </span>
           </div>
           <div className="mt-6 h-[330px]">
-            {mounted ? (
+            {chartLoading ? (
+              <div className="h-full w-full animate-pulse rounded-2xl bg-[rgba(83,97,87,.08)]" />
+            ) : !mounted || classPerformanceData.length === 0 ? (
+              <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-[rgba(83,97,87,.2)]">
+                <p className="text-sm font-medium text-[var(--clay)]">No chart data available</p>
+              </div>
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={classPerformance}>
+                <AreaChart data={classPerformanceData}>
                   <defs>
                     <linearGradient id="avg" x1="0" x2="0" y1="0" y2="1">
                       <stop offset="0%" stopColor="#315c43" stopOpacity={0.35} />
@@ -133,7 +164,7 @@ export function DashboardScreen() {
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            ) : null}
+            )}
           </div>
         </section>
         <section className="surface rounded-[28px] p-5">

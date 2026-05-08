@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   FiAlertCircle,
@@ -16,6 +17,7 @@ import { api } from "@/lib/api";
 import { validateStudentForm, validateTransferForm } from "@/lib/admin-forms";
 import type { SchoolClass } from "@/types/gradeflow";
 import { Button, EmptyState, InlineError, SectionHeader, Pagination } from "./ui";
+import { BulkUploadModal } from "./bulk-upload-modal";
 
 // ---------------------------------------------------------------------------
 // Row type
@@ -524,6 +526,7 @@ function StatusModal({ student, onClose, onUpdated }: StatusModalProps) {
 // ---------------------------------------------------------------------------
 
 export function StudentsScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [liveRows, setLiveRows] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -531,6 +534,7 @@ export function StudentsScreen() {
 
   // Modal state
   const [addOpen, setAddOpen] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [transferStudent, setTransferStudent] = useState<StudentRow | null>(null);
   const [statusStudent, setStatusStudent] = useState<StudentRow | null>(null);
 
@@ -647,7 +651,7 @@ export function StudentsScreen() {
         />
         <div className="flex gap-2">
           <Button icon={FiUserPlus} onClick={() => setAddOpen(true)}>Add student</Button>
-          <Button variant="secondary" icon={FiSend}>Bulk upload</Button>
+          <Button variant="secondary" icon={FiSend} onClick={() => setShowBulkUpload(true)}>Bulk upload</Button>
         </div>
       </div>
 
@@ -690,7 +694,10 @@ export function StudentsScreen() {
                 <tbody>
                   {rows.map((student) => (
                     <tr key={student.id} className="bg-[rgba(255,253,247,.68)]">
-                      <td className="rounded-l-2xl px-4 py-4">
+                      <td
+                        className="rounded-l-2xl px-4 py-4 cursor-pointer"
+                        onClick={() => router.push(`/students/${student.id}`)}
+                      >
                         <p className="font-black">{student.name}</p>
                         <p className="text-sm text-ink-soft">{student.studentId}</p>
                       </td>
@@ -699,7 +706,7 @@ export function StudentsScreen() {
                       <td className="px-4 py-4">{student.fee}</td>
                       <td className="px-4 py-4 font-black">{student.average}%</td>
                       <td className="rounded-r-2xl px-4 py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="secondary"
                             icon={FiLink}
@@ -746,6 +753,12 @@ export function StudentsScreen() {
         <AddStudentModal
           onClose={() => setAddOpen(false)}
           onCreated={handleStudentCreated}
+        />
+      )}
+      {showBulkUpload && (
+        <BulkUploadModal
+          onClose={() => setShowBulkUpload(false)}
+          onUploaded={() => fetchStudents(1)}
         />
       )}
       {transferStudent && (

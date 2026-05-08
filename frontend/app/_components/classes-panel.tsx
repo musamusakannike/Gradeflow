@@ -7,13 +7,272 @@ import {
   FiArrowLeft,
   FiBook,
   FiBookOpen,
+  FiEdit,
   FiLink,
   FiRefreshCw,
+  FiTrash2,
 } from "react-icons/fi";
 import { api, ApiError } from "@/lib/api";
 import { validateClassForm, validateSubjectForm } from "@/lib/admin-forms";
 import type { SchoolClass, Subject } from "@/types/gradeflow";
 import { Button, EmptyState, InlineError, Pagination } from "./ui";
+import { ConfirmDialog } from "./confirm-dialog";
+
+// ---------------------------------------------------------------------------
+// EditClassModal — edit an existing class
+// ---------------------------------------------------------------------------
+
+interface EditClassModalProps {
+  cls: SchoolClass;
+  onClose: () => void;
+  onSaved: (updated: SchoolClass) => void;
+}
+
+function EditClassModal({ cls, onClose, onSaved }: EditClassModalProps) {
+  const [name, setName] = useState(cls.name);
+  const [level, setLevel] = useState(String(cls.level));
+  const [section, setSection] = useState(cls.section ?? "");
+  const [capacity, setCapacity] = useState(String(cls.capacity ?? ""));
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<Record<string, string>>({});
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const levelRef = useRef<HTMLInputElement>(null);
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  function clearFieldError(field: string) {
+    setFormError((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const errors = validateClassForm({ name, level, section, capacity });
+    if (Object.keys(errors).length > 0) {
+      setFormError(errors);
+      if (errors.name) nameRef.current?.focus();
+      else if (errors.level) levelRef.current?.focus();
+      return;
+    }
+
+    // Capacity is required per task spec
+    if (!capacity || capacity.trim() === "") {
+      setFormError({ capacity: "Capacity is required." });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const updated = await api<SchoolClass>(`/classes/${cls.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: name.trim(),
+          level: Number(level),
+          capacity: Number(capacity),
+          section: section.trim() || undefined,
+        }),
+      });
+
+      toast.success(`Class "${updated.name}" updated successfully`);
+      onSaved(updated);
+      onClose();
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setFormError({
+          form: error.message || "A class with this name already exists.",
+        });
+      } else {
+        setFormError({
+          form:
+            error instanceof Error
+              ? error.message
+              : "Could not update class. Please try again.",
+        });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-class-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,.4)]"
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
+    >
+      <div className="surface w-full max-w-lg rounded-[28px] p-6 mx-4">
+        <h2
+          id="edit-class-title"
+          className="text-xl font-black text-[var(--ink)]"
+        >
+          Edit Class
+        </h2>
+
+        {/* Form-level error */}
+        {formError.form && (
+          <div
+            role="alert"
+            className="mt-3 flex items-start gap-2 rounded-2xl border border-[rgba(182,69,69,.2)] bg-[rgba(182,69,69,.06)] px-4 py-3 text-sm text-danger"
+          >
+            <FiAlertCircle className="mt-0.5 shrink-0 text-base" />
+            {formError.form}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate className="mt-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Class Name */}
+            <div>
+              <label
+                htmlFor="edit-class-name"
+                className="mb-1.5 block text-sm font-semibold text-ink"
+              >
+                Class Name{" "}
+                <span aria-hidden="true" className="text-danger">
+                  *
+                </span>
+              </label>
+              <input
+                ref={nameRef}
+                id="edit-class-name"
+                type="text"
+                className="field w-full"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  clearFieldError("name");
+                  clearFieldError("form");
+                }}
+                aria-describedby={formError.name ? "edit-class-name-error" : undefined}
+                aria-invalid={!!formError.name}
+                disabled={submitting}
+                placeholder="e.g. Grade 5A"
+              />
+              <InlineError id="edit-class-name-error" message={formError.name} />
+            </div>
+
+            {/* Level */}
+            <div>
+              <label
+                htmlFor="edit-class-level"
+                className="mb-1.5 block text-sm font-semibold text-ink"
+              >
+                Level (1–12){" "}
+                <span aria-hidden="true" className="text-danger">
+                  *
+                </span>
+              </label>
+              <input
+                ref={levelRef}
+                id="edit-class-level"
+                type="number"
+                min={1}
+                max={12}
+                className="field w-full"
+                value={level}
+                onChange={(e) => {
+                  setLevel(e.target.value);
+                  clearFieldError("level");
+                }}
+                aria-describedby={formError.level ? "edit-class-level-error" : undefined}
+                aria-invalid={!!formError.level}
+                disabled={submitting}
+                placeholder="e.g. 5"
+              />
+              <InlineError id="edit-class-level-error" message={formError.level} />
+            </div>
+
+            {/* Section */}
+            <div>
+              <label
+                htmlFor="edit-class-section"
+                className="mb-1.5 block text-sm font-semibold text-ink"
+              >
+                Section{" "}
+                <span className="text-xs font-normal text-ink-soft">
+                  (optional)
+                </span>
+              </label>
+              <input
+                id="edit-class-section"
+                type="text"
+                className="field w-full"
+                value={section}
+                onChange={(e) => setSection(e.target.value)}
+                disabled={submitting}
+                placeholder="e.g. A, B"
+                maxLength={5}
+              />
+            </div>
+
+            {/* Capacity */}
+            <div>
+              <label
+                htmlFor="edit-class-capacity"
+                className="mb-1.5 block text-sm font-semibold text-ink"
+              >
+                Capacity{" "}
+                <span aria-hidden="true" className="text-danger">
+                  *
+                </span>
+              </label>
+              <input
+                id="edit-class-capacity"
+                type="number"
+                min={10}
+                max={200}
+                className="field w-full"
+                value={capacity}
+                onChange={(e) => {
+                  setCapacity(e.target.value);
+                  clearFieldError("capacity");
+                }}
+                aria-describedby={formError.capacity ? "edit-class-capacity-error" : undefined}
+                aria-invalid={!!formError.capacity}
+                disabled={submitting}
+                placeholder="e.g. 30"
+              />
+              <InlineError id="edit-class-capacity-error" message={formError.capacity} />
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={submitting}
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // ClassSubjectView — shown when a class is selected
@@ -353,6 +612,8 @@ interface ClassListProps {
   loading: boolean;
   selectedClass: SchoolClass | null;
   onSelect: (cls: SchoolClass) => void;
+  onEdit: (cls: SchoolClass) => void;
+  onDeactivate: (cls: SchoolClass) => void;
 }
 
 function ClassList({
@@ -360,6 +621,8 @@ function ClassList({
   loading,
   selectedClass,
   onSelect,
+  onEdit,
+  onDeactivate,
 }: ClassListProps) {
   if (loading) {
     return (
@@ -414,11 +677,37 @@ function ClassList({
                     {cls.capacity ? ` · Capacity ${cls.capacity}` : ""}
                   </p>
                 </div>
-                {isSelected && (
-                  <span className="shrink-0 rounded-full bg-[rgba(49,92,67,.15)] px-2.5 py-0.5 text-xs font-semibold text-moss">
-                    Selected
-                  </span>
-                )}
+                <div className="flex shrink-0 items-center gap-1">
+                  {isSelected && (
+                    <span className="rounded-full bg-[rgba(49,92,67,.15)] px-2.5 py-0.5 text-xs font-semibold text-moss">
+                      Selected
+                    </span>
+                  )}
+                  {/* Edit button */}
+                  <button
+                    type="button"
+                    aria-label={`Edit ${cls.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(cls);
+                    }}
+                    className="focus-ring pressable grid size-8 place-items-center rounded-xl text-ink-soft hover:bg-[rgba(49,92,67,.1)] hover:text-moss"
+                  >
+                    <FiEdit className="text-sm" />
+                  </button>
+                  {/* Deactivate button */}
+                  <button
+                    type="button"
+                    aria-label={`Deactivate ${cls.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeactivate(cls);
+                    }}
+                    className="focus-ring pressable grid size-8 place-items-center rounded-xl text-ink-soft hover:bg-[rgba(182,69,69,.1)] hover:text-danger"
+                  >
+                    <FiTrash2 className="text-sm" />
+                  </button>
+                </div>
               </div>
             </button>
           </li>
@@ -661,6 +950,10 @@ export function ClassesPanel() {
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 50;
 
+  const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
+  const [deactivatingClass, setDeactivatingClass] = useState<SchoolClass | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+
   async function fetchClasses(page = 1) {
     setLoading(true);
     setFetchError(null);
@@ -691,6 +984,45 @@ export function ClassesPanel() {
 
   function handleClassCreated(cls: SchoolClass) {
     setClasses((prev) => [cls, ...prev]);
+  }
+
+  function handleClassSaved(updated: SchoolClass) {
+    setClasses((prev) =>
+      prev.map((c) => (c.id === updated.id ? updated : c)),
+    );
+    // Keep selectedClass in sync if it was the one edited
+    setSelectedClass((prev) =>
+      prev?.id === updated.id ? updated : prev,
+    );
+  }
+
+  async function handleDeactivateConfirm() {
+    if (!deactivatingClass) return;
+    setDeactivating(true);
+    try {
+      await api<SchoolClass>(`/classes/${deactivatingClass.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: false }),
+      });
+
+      toast.success(`Class "${deactivatingClass.name}" deactivated`);
+      // Remove from list (deactivated classes are no longer active)
+      setClasses((prev) => prev.filter((c) => c.id !== deactivatingClass.id));
+      setTotalItems((prev) => Math.max(0, prev - 1));
+      // Clear selection if the deactivated class was selected
+      setSelectedClass((prev) =>
+        prev?.id === deactivatingClass.id ? null : prev,
+      );
+      setDeactivatingClass(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not deactivate class. Please try again.",
+      );
+    } finally {
+      setDeactivating(false);
+    }
   }
 
   if (fetchError) {
@@ -724,6 +1056,8 @@ export function ClassesPanel() {
               prev?.id === cls.id ? null : cls,
             )
           }
+          onEdit={(cls) => setEditingClass(cls)}
+          onDeactivate={(cls) => setDeactivatingClass(cls)}
         />
 
         {!loading && classes.length > 0 && (
@@ -741,6 +1075,26 @@ export function ClassesPanel() {
         <ClassSubjectView
           selectedClass={selectedClass}
           onClose={() => setSelectedClass(null)}
+        />
+      )}
+
+      {editingClass && (
+        <EditClassModal
+          cls={editingClass}
+          onClose={() => setEditingClass(null)}
+          onSaved={handleClassSaved}
+        />
+      )}
+
+      {deactivatingClass && (
+        <ConfirmDialog
+          title="Deactivate Class"
+          message={`Are you sure you want to deactivate "${deactivatingClass.name}"? This will remove it from the active classes list.`}
+          confirmLabel="Deactivate"
+          variant="danger"
+          loading={deactivating}
+          onConfirm={handleDeactivateConfirm}
+          onCancel={() => setDeactivatingClass(null)}
         />
       )}
     </div>

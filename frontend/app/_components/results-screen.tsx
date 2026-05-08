@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { FiDownload, FiEye, FiLock, FiSend, FiUnlock } from "react-icons/fi";
 import { api, downloadFile } from "@/lib/api";
-import { resultRows } from "@/lib/demo-data";
 import {
   validateResultsLifecycleForm,
   validatePdfDownloadForm,
@@ -29,6 +28,11 @@ export function ResultsScreen() {
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedTermId, setSelectedTermId] = useState("");
   const [lifecycleErrors, setLifecycleErrors] = useState<Record<string, string>>({});
+
+  // Subject spread chart state
+  const [subjectSpreadData, setSubjectSpreadData] = useState<Array<{ subject: string; total: number }>>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState(false);
 
   // PDF download form state
   const [pdfStudentId, setPdfStudentId] = useState("");
@@ -60,6 +64,27 @@ export function ResultsScreen() {
         toast.error(error instanceof Error ? error.message : "Could not load reference data");
       });
   }, []);
+
+  useEffect(() => {
+    if (!selectedTermId) {
+      setSubjectSpreadData([]);
+      setChartError(false);
+      return;
+    }
+    setChartLoading(true);
+    setChartError(false);
+    api<Array<{ subject: string; total: number }>>(`/results/subject-spread?termId=${selectedTermId}`)
+      .then((data) => {
+        setSubjectSpreadData(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        setSubjectSpreadData([]);
+        setChartError(true);
+      })
+      .finally(() => {
+        setChartLoading(false);
+      });
+  }, [selectedTermId]);
 
   async function lifecycle(action: "compile" | "release" | "unrelease") {
     const errors = validateResultsLifecycleForm({
@@ -191,9 +216,21 @@ export function ResultsScreen() {
             <Button variant="secondary" icon={FiEye} onClick={() => setShowAnalytics(true)}>Analytics</Button>
           </div>
           <div className="mt-5 h-[280px]">
-            {mounted ? (
+            {chartLoading ? (
+              <div className="flex h-full flex-col gap-3 animate-pulse">
+                <div className="h-full rounded-2xl bg-[var(--surface-2,#e5e7eb)]" />
+              </div>
+            ) : !selectedTermId ? (
+              <div className="flex h-full items-center justify-center text-sm text-[var(--muted,#6b7280)]">
+                Select a term to view subject spread
+              </div>
+            ) : chartError || subjectSpreadData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-[var(--muted,#6b7280)]">
+                No data available
+              </div>
+            ) : mounted ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={resultRows}>
+                <BarChart data={subjectSpreadData}>
                   <XAxis dataKey="subject" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} />
                   <Tooltip />

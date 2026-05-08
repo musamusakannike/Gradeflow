@@ -211,3 +211,41 @@ export interface ClassBroadsheet {
     classAverage: number;
   };
 }
+
+export interface StudentDetail {
+  _id: string;
+  studentId: string;
+  status: string;
+  gender?: string;
+  dateOfBirth?: string;
+  address?: string;
+  parentName: string;
+  parentEmail?: string;
+  parentPhone: string;
+  user?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    status: string;
+  };
+  class?: {
+    _id: string;
+    name: string;
+    level: number;
+    section?: string;
+  };
+}
+
+export interface FeeStatusEntry {
+  termId: string;
+  termName: string;
+  amountExpected: number;
+  amountPaid: number;
+  balance: number;
+  status: "paid" | "partial" | "unpaid";
+}
+
+export interface FeeStatusResponse {
+  studentId: string;
+  feeStatuses: FeeStatusEntry[];
+}
