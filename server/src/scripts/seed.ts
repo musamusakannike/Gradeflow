@@ -113,12 +113,11 @@ async function seed() {
     logger.info(`School created: ${school.name} (${school.code})`);
 
     // 2. Create School Admin
-    const adminPassword = await hashPassword("Password123!");
     const schoolAdmin = await User.create({
       firstName: "Babatunde",
       lastName: "Adeyemi",
       email: "admin@emeraldcollege.edu.ng",
-      password: adminPassword,
+      password: "Password123!",
       role: UserRole.SCHOOL_ADMIN,
       schoolId: school._id,
       phone: "08033221144",
@@ -186,13 +185,12 @@ async function seed() {
 
     // 5. Create Teachers
     const teachers: any[] = [];
-    const teacherPassword = await hashPassword("Teacher123!");
     for (let i = 0; i < 15; i++) {
       const teacher = await User.create({
         firstName: getRandom(NIGERIAN_FIRST_NAMES),
         lastName: getRandom(NIGERIAN_LAST_NAMES),
         email: `teacher${i + 1}@emeraldcollege.edu.ng`,
-        password: teacherPassword,
+        password: "Teacher123!",
         role: UserRole.TEACHER,
         schoolId: school._id,
         phone: `080${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -268,7 +266,6 @@ async function seed() {
     logger.info(`${classSubjects.length} class-subject assignments created.`);
 
     // 8. Create Students and Scores
-    const studentPassword = await hashPassword("Student123!");
     let studentCount = 0;
     const usedStudentIds = new Set<string>();
     
@@ -283,7 +280,7 @@ async function seed() {
           firstName,
           lastName,
           email,
-          password: studentPassword,
+          password: "Student123!",
           role: UserRole.STUDENT,
           schoolId: school._id,
           phone: `070${Math.floor(10000000 + Math.random() * 90000000)}`,
